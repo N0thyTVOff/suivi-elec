@@ -83,6 +83,9 @@ séparément dans `main`, puis met à jour `chore(main): release X.Y.Z`. Tant qu
 fusionne pas manuellement cette Release PR, aucun tag, aucune GitHub Release et aucun déploiement
 de production ne sont créés. Aucun déploiement n'est configuré pour ce projet local.
 
+Le mainteneur doit ajouter une fois le secret GitHub Actions `RELEASE_PLEASE_TOKEN` selon
+[CONTRIBUTING.md](CONTRIBUTING.md). Sa valeur n'est jamais nécessaire dans la configuration locale.
+
 ## Sécurité et confidentialité
 
 Signalez les vulnérabilités avec le

@@ -26,3 +26,10 @@ automatiquement. Sa fusion manuelle constitue l'autorisation explicite de créer
 GitHub Release. Aucun déploiement n'est configuré. Si la CI n'est pas automatiquement attachée au
 commit d'une Release PR créée avec `GITHUB_TOKEN`, lancez manuellement le workflow CI sur sa
 branche avant la fusion.
+
+Le dépôt doit contenir un secret Actions `RELEASE_PLEASE_TOKEN`, créé avec un jeton finement limité
+à ce seul dépôt et aux permissions **Contents: read/write**, **Pull requests: read/write** et
+**Issues: read/write**. Enregistrez-le dans _Settings → Secrets and variables → Actions_ ; ne le
+copiez jamais dans une issue, un fichier ou un journal. Ce choix permet de laisser désactivée
+l'autorisation générale des workflows à approuver des PR et déclenche normalement la CI de la
+Release PR.

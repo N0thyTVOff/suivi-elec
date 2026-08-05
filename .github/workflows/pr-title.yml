@@ -22,5 +22,5 @@ jobs:
           [[ "$PR_TITLE" =~ $pattern ]] || { echo 'Titre non conforme à Conventional Commits.'; exit 1; }
           if [[ "$PR_ACTOR" != 'dependabot[bot]' ]]; then
             subject="${PR_TITLE#*: }"
-            [[ "$subject" =~ ^[a-zà-ÿ0-9] ]] || { echo 'Le sujet doit commencer par une minuscule.'; exit 1; }
+            [[ "$subject" =~ ^[[:lower:][:digit:]] ]] || { echo 'Le sujet doit commencer par une minuscule.'; exit 1; }
           fi

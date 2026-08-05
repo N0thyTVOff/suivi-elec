@@ -78,7 +78,8 @@ jobs:
 
   dependency-review:
     name: Revue des dépendances
-    if: github.event_name == 'pull_request'
+    # GitHub Free ne propose ce contrôle que pour les dépôts publics.
+    if: github.event_name == 'pull_request' && !github.event.repository.private
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

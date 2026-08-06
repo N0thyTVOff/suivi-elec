@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/N0thyTVOff/suivi-elec/compare/suivi-elec-v1.0.0...suivi-elec-v1.1.0) (2026-08-06)
+
+
+### Fonctionnalités
+
+* ajoute l’onboarding et l’accès distant sécurisé ([#15](https://github.com/N0thyTVOff/suivi-elec/issues/15)) ([e949e4a](https://github.com/N0thyTVOff/suivi-elec/commit/e949e4a08146f7117582da4c00811cfe4238302b))
+
 ## [1.0.0](https://github.com/N0thyTVOff/suivi-elec/compare/suivi-elec-v1.0.0...suivi-elec-v1.0.0) (2026-08-06)
 
 

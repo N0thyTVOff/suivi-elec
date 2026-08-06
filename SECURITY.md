@@ -3,7 +3,7 @@
 ## Signaler une vulnérabilité
 
 Utilisez exclusivement le
-[signalement privé GitHub](https://github.com/N0thyTVOff/suivi-elec/security/advisories/new). Ne
+[signalement privé GitHub](https://github.com/N0thyTVOff/wattelier/security/advisories/new). Ne
 publiez aucune faille, clé ou donnée personnelle dans une issue. Indiquez la version, l'impact, une
 reproduction minimale anonymisée et une piste de correction. Un accusé de réception est visé sous
 sept jours, sans garantie de délai de correction.
@@ -12,7 +12,7 @@ Seule la dernière version publiée est prise en charge.
 
 ## Modèle de sécurité
 
-Suivi Élec est une application auto-hébergée sans comptes multi-utilisateurs. Les nouvelles
+Wattelier est une application auto-hébergée sans comptes multi-utilisateurs. Les nouvelles
 installations protègent toute l'API avec un jeton aléatoire ; seule son empreinte est stockée. Une
 installation mise à niveau doit activer cette protection depuis Réglages avant tout accès distant.
 

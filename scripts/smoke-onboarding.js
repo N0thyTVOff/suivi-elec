@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'suivi-elec-smoke-'));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wattelier-smoke-'));
 const port = 32_000 + Math.floor(Math.random() * 1_000);
 const base = `http://127.0.0.1:${port}`;
 const child = spawn(process.execPath, ['server/index.js'], {

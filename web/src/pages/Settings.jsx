@@ -6,10 +6,15 @@ export default function Settings({ status }) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newServerToken, setNewServerToken] = useState('');
+  const [desktopInfo, setDesktopInfo] = useState(null);
 
   useEffect(() => {
     api('settings')
       .then(setSettings)
+      .catch(() => {});
+    window.wattelierDesktop
+      ?.getRuntimeInfo()
+      .then(setDesktopInfo)
       .catch(() => {});
   }, []);
 
@@ -52,15 +57,62 @@ export default function Settings({ status }) {
     setNewServerToken(result.accessToken);
   };
 
+  const toggleOpenAtLogin = async () => {
+    const result = await window.wattelierDesktop.setOpenAtLogin(!desktopInfo.openAtLogin);
+    setDesktopInfo((current) => ({ ...current, ...result }));
+  };
+
   return (
     <>
+      {desktopInfo && (
+        <div className="panel">
+          <h2>Application Windows</h2>
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <div>
+              <b>Wattelier {desktopInfo.version}</b>
+              <p className="note" style={{ margin: '4px 0 0' }}>
+                {desktopInfo.portable
+                  ? 'Version portable · données dans le dossier Wattelier-data à côté du programme.'
+                  : 'Version installée · données conservées dans votre profil Windows.'}
+              </p>
+            </div>
+            {!desktopInfo.portable && (
+              <div
+                className={`toggle ${desktopInfo.openAtLogin ? 'on' : ''}`}
+                onClick={toggleOpenAtLogin}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') toggleOpenAtLogin();
+                }}
+                role="switch"
+                tabIndex="0"
+                aria-checked={desktopInfo.openAtLogin}
+                aria-label="Démarrer Wattelier avec Windows"
+              >
+                <span className="track" />
+                <span>Démarrer avec Windows</span>
+              </div>
+            )}
+          </div>
+          {desktopInfo.portable && (
+            <p className="note" style={{ marginBottom: 0 }}>
+              Le démarrage automatique est désactivé pour préserver le caractère déplaçable de la
+              version portable.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="panel">
         <h2>Mode démo</h2>
         <div className="toggle-row" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div
             className={`toggle ${settings.demo_mode === '1' ? 'on' : ''}`}
             onClick={toggleDemo}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') toggleDemo();
+            }}
             role="switch"
+            tabIndex="0"
             aria-checked={settings.demo_mode === '1'}
           >
             <span className="track" />
@@ -489,9 +541,10 @@ export default function Settings({ status }) {
           )}
         </div>
         <p className="note" style={{ marginTop: 8 }}>
-          Le PC doit rester allumé (voir <code>install-startup.ps1</code> pour le démarrage
-          automatique). Pour un accès distant, utilisez un nom de domaine HTTPS, un reverse proxy ou
-          un VPN comme Tailscale. Ne redirigez pas directement ce port HTTP sur Internet.
+          Le PC doit rester allumé ; l’application Windows continue la collecte dans la zone de
+          notification lorsque sa fenêtre est fermée. Pour un accès distant, utilisez un nom de
+          domaine HTTPS, un reverse proxy ou un VPN comme Tailscale. Ne redirigez pas directement ce
+          port HTTP sur Internet.
         </p>
       </div>
 

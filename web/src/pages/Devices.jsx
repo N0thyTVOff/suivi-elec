@@ -46,7 +46,9 @@ export default function Devices() {
       .then(setProfileRows)
       .catch(() => {});
   };
-  useEffect(load, [period]);
+  useEffect(() => {
+    load();
+  }, [period]);
   useEffect(() => {
     api(`devices/hourly?date=${dayDate}`)
       .then(setDayRows)

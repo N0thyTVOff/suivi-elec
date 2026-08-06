@@ -4,16 +4,34 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['coverage/**', 'data/**', 'dist/**', 'node_modules/**'] },
+  {
+    ignores: [
+      'coverage/**',
+      'data/**',
+      'dist/**',
+      'node_modules/**',
+      'playwright-report/**',
+      'release/**',
+      'test-results/**',
+    ],
+  },
   js.configs.recommended,
   {
-    files: ['server/**/*.js', 'scripts/**/*.js', '*.js'],
+    files: ['server/**/*.js', 'scripts/**/*.js', 'desktop/**/*.js', '*.js'],
     languageOptions: {
       ecmaVersion: 'latest',
       globals: globals.node,
       sourceType: 'module',
     },
     rules: { 'no-console': 'off' },
+  },
+  {
+    files: ['desktop/**/*.cjs'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      globals: globals.node,
+      sourceType: 'commonjs',
+    },
   },
   {
     files: ['web/**/*.{js,jsx}'],
@@ -39,5 +57,9 @@ export default [
   {
     files: ['test/**/*.js'],
     languageOptions: { globals: globals.node },
+  },
+  {
+    files: ['e2e/**/*.js'],
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },
 ];

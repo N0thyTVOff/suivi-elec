@@ -2,7 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { getSetting, setSetting } from './db.js';
 import { hashAccessToken, matchesAccessToken } from './token-utils.js';
 
-const COOKIE_NAME = 'suivi_elec_token';
+const COOKIE_NAME = 'wattelier_token';
+const LEGACY_COOKIE_NAME = 'suivi_elec_token';
 
 function readCookie(req, name) {
   const raw = req.headers.cookie || '';
@@ -16,7 +17,7 @@ function readCookie(req, name) {
 function requestToken(req) {
   const header = req.headers.authorization || '';
   if (header.startsWith('Bearer ')) return header.slice(7).trim();
-  return readCookie(req, COOKIE_NAME);
+  return readCookie(req, COOKIE_NAME) || readCookie(req, LEGACY_COOKIE_NAME);
 }
 
 export function authRequired() {
@@ -38,7 +39,7 @@ export function requireApiAuth(req, res, next) {
     return res.status(428).json({ error: 'configuration initiale requise' });
   }
   if (!isAuthorized(req)) {
-    res.setHeader('WWW-Authenticate', 'Bearer realm="Suivi Elec"');
+    res.setHeader('WWW-Authenticate', 'Bearer realm="Wattelier"');
     return res.status(401).json({ error: "jeton d'accès requis" });
   }
   next();
@@ -61,4 +62,5 @@ export function setAuthCookie(req, res, token) {
 
 export function clearAuthCookie(res) {
   res.append('Set-Cookie', `${COOKIE_NAME}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`);
+  res.append('Set-Cookie', `${LEGACY_COOKIE_NAME}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`);
 }

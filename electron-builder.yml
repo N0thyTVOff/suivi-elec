@@ -1,0 +1,36 @@
+appId: io.github.n0thytvoff.wattelier
+productName: Wattelier
+asar: true
+asarUnpack:
+  - node_modules/better-sqlite3/**
+files:
+  - desktop/**
+  - server/**
+  - dist/**
+  - package.json
+  - LICENSE
+  - NOTICE
+directories:
+  buildResources: build
+  output: release
+win:
+  icon: build/icon.ico
+  executableName: Wattelier
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+nsis:
+  include: build/installer.nsh
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  deleteAppDataOnUninstall: false
+  shortcutName: Wattelier
+  artifactName: Wattelier-Setup-v${version}-${arch}.${ext}
+portable:
+  artifactName: Wattelier-Portable-v${version}-${arch}.${ext}
+  requestExecutionLevel: user
+publish: null

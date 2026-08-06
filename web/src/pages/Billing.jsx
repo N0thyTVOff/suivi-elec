@@ -15,7 +15,9 @@ export default function Billing() {
         setPeriod({ start: data.start, end: data.end });
       })
       .catch(() => {});
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const addInstallment = async () => {
     const amt = Number(formAmount);

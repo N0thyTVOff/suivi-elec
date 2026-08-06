@@ -10,7 +10,7 @@ import {
 } from './db.js';
 
 const API_BASE = 'https://conso.boris.sh/api';
-const USER_AGENT = 'suivi-elec-perso (app locale de suivi de consommation)';
+const USER_AGENT = 'Wattelier (application locale de suivi de consommation)';
 
 export const linkyEvents = new EventEmitter();
 

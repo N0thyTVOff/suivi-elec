@@ -62,10 +62,14 @@ export default function Onboarding({ tariffs, onReady }) {
   return (
     <main className="onboarding-shell">
       <div className="onboarding-card">
+        <div className="onboarding-brand">
+          <img src="/brand/wattelier-mark.svg" alt="" />
+          <span>Wattelier</span>
+        </div>
         <div className="eyebrow">Configuration initiale · étape {step}/3</div>
         {step === 1 && (
           <>
-            <h1>Bienvenue dans Suivi Élec</h1>
+            <h1>Bienvenue dans Wattelier</h1>
             <p>
               Choisissez uniquement les sources que vous utilisez. Vous pourrez les modifier plus
               tard dans les réglages.
@@ -300,7 +304,7 @@ export default function Onboarding({ tariffs, onReady }) {
             </p>
             <div className="onboarding-actions">
               <button className="btn" onClick={onReady}>
-                Ouvrir Suivi Élec
+                Ouvrir Wattelier
               </button>
             </div>
           </>
@@ -326,7 +330,11 @@ export function ServerLogin({ onReady }) {
   return (
     <main className="onboarding-shell">
       <form className="onboarding-card" onSubmit={submit}>
-        <div className="eyebrow">Serveur Suivi Élec</div>
+        <div className="onboarding-brand">
+          <img src="/brand/wattelier-mark.svg" alt="" />
+          <span>Wattelier</span>
+        </div>
+        <div className="eyebrow">Connexion au serveur Wattelier</div>
         <h1>Connexion sécurisée</h1>
         <p>Saisissez une fois le jeton fourni par votre serveur.</p>
         <label>

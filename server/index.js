@@ -2,10 +2,11 @@ import 'dotenv/config';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import {
   db,
+  DATA_DIR,
   allSettings,
   setSetting,
   getSetting,
@@ -41,8 +42,18 @@ import {
 import { supportedTariffs } from './tariffs.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.PORT) || 3017;
-const HOST = process.env.HOST || '0.0.0.0';
+const DEFAULT_PORT = Number(process.env.PORT) || 3017;
+const DEFAULT_HOST = process.env.HOST || '0.0.0.0';
+let activePort = DEFAULT_PORT;
+let activeHost = DEFAULT_HOST;
+let activeServer = null;
+const appTimers = new Set();
+
+function every(callback, delay) {
+  const timer = setInterval(callback, delay);
+  appTimers.add(timer);
+  return timer;
+}
 
 const app = express();
 if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
@@ -196,7 +207,7 @@ app.get('/api/status', (req, res) => {
   const urls = Object.values(os.networkInterfaces())
     .flat()
     .filter((i) => i && i.family === 'IPv4' && !i.internal)
-    .map((i) => `http://${i.address}:${PORT}`);
+    .map((i) => `http://${i.address}:${activePort}`);
   res.json({
     linky: linkyStatus,
     sonoff: sonoffStatus,
@@ -206,7 +217,7 @@ app.get('/api/status', (req, res) => {
     },
     demo: getSetting('demo_mode') === '1',
     urls,
-    server: { host: HOST, port: PORT, authEnabled: authRequired() },
+    server: { host: activeHost, port: activePort, authEnabled: authRequired() },
   });
 });
 
@@ -350,17 +361,13 @@ function broadcast(event, data) {
   }
 }
 
-// battement de cœur : permet au navigateur de détecter un flux mort (connexion
-// « à moitié ouverte » après une veille) et de se reconnecter tout seul
-setInterval(() => broadcast('hb', { t: Date.now() }), 20_000);
-
 sonoffEvents.on('reading', (r) => broadcast('reading', r));
 sonoffEvents.on('status', () => broadcast('status', { sonoff: sonoffStatus }));
 linkyEvents.on('updated', () => broadcast('linky', { at: Date.now() }));
 appEvents.on('event', (ev) => broadcast('notice', ev));
 
-// surveillance de la puissance totale vs abonnement (alerte au-delà de 90 %)
-setInterval(() => {
+// Surveillance de la puissance totale vs abonnement (alerte au-delà de 90 %).
+function checkOverload() {
   try {
     const s = stats.summary();
     const limitW = (Number(getSetting('kva')) || 6) * 1000;
@@ -375,14 +382,22 @@ setInterval(() => {
   } catch {
     /* base occupée : prochain tour */
   }
-}, 60_000);
+}
 
-// battement démo : simule le temps réel quand le mode démo est actif
-setInterval(() => {
+// Battement démo : simule le temps réel quand le mode démo est actif.
+function tickDemo() {
   if (getSetting('demo_mode') === '1') {
     for (const r of demoTick()) broadcast('reading', r);
   }
-}, 10_000);
+}
+
+function startBackgroundTimers() {
+  // Le heartbeat permet au navigateur de détecter un flux SSE mort après une veille.
+  every(() => broadcast('hb', { t: Date.now() }), 20_000);
+  every(checkOverload, 60_000);
+  every(tickDemo, 10_000);
+  every(purgeOldReadings, 12 * 3600_000);
+}
 
 // ---------- Frontend statique (build Vite) ----------
 
@@ -392,22 +407,54 @@ app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(dist, 'index.html
 
 // ---------- Démarrage ----------
 
-const server = app.listen(PORT, HOST, () => {
-  console.log(`Suivi élec démarré → http://localhost:${PORT} (écoute ${HOST})`);
-  recomputeManualDaily(); // ré-attribue les relevés manuels si la règle de calcul a évolué
-  startLinky();
-  startSonoff();
-  purgeOldReadings();
-  setInterval(purgeOldReadings, 12 * 3600_000);
-});
-
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    // deux instances simultanées se sabotent mutuellement auprès d'eWeLink :
-    // celle-ci s'efface proprement
-    console.error(`Le port ${PORT} est déjà pris : une autre instance tourne. Celle-ci s'arrête.`);
-    process.exit(0);
+export async function startServer({ host = DEFAULT_HOST, port = DEFAULT_PORT, dataDir } = {}) {
+  if (activeServer) {
+    return { server: activeServer, host: activeHost, port: activePort, dataDir: DATA_DIR };
   }
-  console.error('Erreur serveur :', err.message);
-  process.exit(1);
-});
+  if (dataDir && path.resolve(dataDir) !== DATA_DIR) {
+    throw new Error('DATA_DIR doit être défini avant le chargement du serveur');
+  }
+  activeHost = host;
+  activePort = Number(port);
+
+  activeServer = await new Promise((resolve, reject) => {
+    const server = app.listen(activePort, activeHost, () => resolve(server));
+    server.once('error', reject);
+  });
+  const address = activeServer.address();
+  if (address && typeof address === 'object') activePort = address.port;
+
+  console.log(`Wattelier démarré → http://localhost:${activePort} (écoute ${activeHost})`);
+  recomputeManualDaily();
+  startLinky();
+  startSonoff().catch((error) => console.error('[sonoff] démarrage :', error.message));
+  purgeOldReadings();
+  startBackgroundTimers();
+  return { server: activeServer, host: activeHost, port: activePort, dataDir: DATA_DIR };
+}
+
+export async function stopServer() {
+  stopLinky();
+  stopSonoff();
+  for (const timer of appTimers) clearInterval(timer);
+  appTimers.clear();
+  for (const client of sseClients) client.end();
+  sseClients.clear();
+  if (!activeServer) return;
+  const server = activeServer;
+  activeServer = null;
+  await new Promise((resolve) => server.close(resolve));
+}
+
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  startServer().catch((error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Le port ${DEFAULT_PORT} est déjà pris : une autre instance tourne.`);
+      process.exitCode = 0;
+      return;
+    }
+    console.error('Erreur serveur :', error.message);
+    process.exitCode = 1;
+  });
+}

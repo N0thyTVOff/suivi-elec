@@ -63,6 +63,37 @@ jobs:
           retention-days: 5
           if-no-files-found: error
 
+  e2e:
+    name: Parcours responsive
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run test:e2e
+
+  windows-package:
+    name: Paquet Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run desktop:build
+      - run: npm run package:validate
+      - shell: pwsh
+        run: ./scripts/smoke-windows-package.ps1
+
   audit:
     name: Audit de production
     runs-on: ubuntu-latest
@@ -93,7 +124,7 @@ jobs:
   CI:
     name: CI
     if: always()
-    needs: [quality, tests, build, audit, dependency-review]
+    needs: [quality, tests, build, e2e, windows-package, audit, dependency-review]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

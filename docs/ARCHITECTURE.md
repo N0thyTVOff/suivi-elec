@@ -1,7 +1,12 @@
 # Architecture
 
 ```text
-Navigateur React / app mobile
+Application Windows (Electron) ──> démarre/arrête le même serveur Express
+  ├── fenêtre locale sécurisée (isolation de contexte, sandbox, sans Node.js)
+  ├── zone de notification et démarrage automatique optionnel
+  └── données installées ou portables ──> elec.db locale
+
+Navigateur React / future app mobile
   ├── jeton Bearer ou cookie HttpOnly
   ├── REST /api/* ──> Express ──> statistiques ──> SQLite locale
   └── SSE /api/events <───────── collecte Linky et Sonoff
@@ -10,10 +15,13 @@ Navigateur React / app mobile
                                       └── Sonoff LAN (mDNS/HTTP chiffré)
 ```
 
-`server/index.js` expose l'API, le flux SSE et le build statique. `server/db.js` possède le schéma
-SQLite et les migrations additives. `server/stats.js` contient les agrégations. `server/linky.js`
-gère la synchronisation et le rattrapage. `server/sonoff/` sépare cloud, découverte LAN et
-cryptographie. `web/src/` contient l'interface React et les pages métier.
+`desktop/main.js` gère le cycle de vie Windows et appelle `startServer()`/`stopServer()` sans
+dupliquer le backend. En mode installé, les données résident dans
+`%APPDATA%\Wattelier\app-data` ; en mode portable, elles résident dans `Wattelier-data` à côté de
+l'exécutable. `server/index.js` expose l'API, le flux SSE et le build statique. `server/db.js`
+possède le schéma SQLite et les migrations additives. `server/stats.js` contient les agrégations.
+`server/linky.js` gère la synchronisation et le rattrapage. `server/sonoff/` sépare cloud,
+découverte LAN et cryptographie. `web/src/` contient l'interface React et les pages métier.
 
 ## Invariants
 

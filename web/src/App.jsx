@@ -1,5 +1,18 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Activity,
+  BarChart3,
+  CircleGauge,
+  History as HistoryIcon,
+  Laptop,
+  Moon,
+  PlugZap,
+  ReceiptText,
+  Settings2,
+  Sun,
+} from 'lucide-react';
 import { api, subscribe } from './api.js';
+import Overview from './pages/Overview.jsx';
 import RealTime from './pages/RealTime.jsx';
 import History from './pages/History.jsx';
 import Devices from './pages/Devices.jsx';
@@ -8,38 +21,43 @@ import Billing from './pages/Billing.jsx';
 import Settings from './pages/Settings.jsx';
 import Onboarding, { ServerLogin } from './pages/Onboarding.jsx';
 
-const TABS = [
-  ['realtime', 'Temps réel'],
-  ['history', 'Historique'],
-  ['devices', 'Par appareil'],
-  ['advanced', 'Stats avancées'],
-  ['billing', 'Facturation'],
-  ['settings', 'Réglages'],
+const PAGES = [
+  { id: 'overview', label: "Vue d'ensemble", short: 'Accueil', icon: CircleGauge },
+  { id: 'realtime', label: 'Temps réel', short: 'Direct', icon: Activity },
+  { id: 'history', label: 'Historique', short: 'Historique', icon: HistoryIcon },
+  { id: 'devices', label: 'Appareils', short: 'Appareils', icon: PlugZap },
+  { id: 'advanced', label: 'Analyses', short: 'Analyses', icon: BarChart3 },
+  { id: 'billing', label: 'Facturation', short: 'Factures', icon: ReceiptText },
+  { id: 'settings', label: 'Réglages', short: 'Réglages', icon: Settings2 },
 ];
 
-function StatusPill({ label, state, title }) {
-  const color =
-    state === 'ok'
-      ? 'var(--ok)'
-      : state === 'warn'
-        ? 'var(--warn)'
-        : state === 'off'
-          ? 'var(--muted)'
-          : 'var(--crit)';
-  const icon = state === 'ok' ? '✓' : state === 'warn' ? '…' : state === 'off' ? '·' : '✕';
+function sourceState(status, source) {
+  if (!status) return 'pending';
+  if (source === 'linky') {
+    if (!status.connectors?.linky || !status.linky.configured) return 'off';
+    if (status.linky.lastError) return 'error';
+    return status.linky.waitingForData ? 'pending' : 'ok';
+  }
+  if (!status.connectors?.ewelink || !status.sonoff.configured) return 'off';
+  if (status.sonoff.lastError) return 'error';
+  return status.sonoff.cloudOnline || status.sonoff.lanDevices > 0 ? 'ok' : 'pending';
+}
+
+function SourceStatus({ label, state }) {
   return (
-    <span className="status-pill" title={title}>
-      <span className="dot" style={{ background: color }} />
-      {label} {icon}
+    <span className={`source-status ${state}`}>
+      <span />
+      {label}
     </span>
   );
 }
 
 export default function App() {
-  const [tab, setTab] = useState('realtime');
+  const [page, setPage] = useState('overview');
   const [status, setStatus] = useState(null);
   const [access, setAccess] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'auto');
+  const current = useMemo(() => PAGES.find((item) => item.id === page) || PAGES[0], [page]);
 
   const refreshAccess = useCallback(
     () =>
@@ -48,14 +66,13 @@ export default function App() {
         .catch(() => setAccess({ error: true })),
     [],
   );
-
   useEffect(refreshAccess, [refreshAccess]);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
-      const resolved = theme === 'auto' ? (media.matches ? 'dark' : 'light') : theme;
-      document.documentElement.dataset.theme = resolved;
+      document.documentElement.dataset.theme =
+        theme === 'auto' ? (media.matches ? 'dark' : 'light') : theme;
     };
     apply();
     media.addEventListener('change', apply);
@@ -70,111 +87,122 @@ export default function App() {
         .then(setStatus)
         .catch(() => {});
     load();
-    const t = setInterval(load, 30_000);
+    const timer = setInterval(load, 30_000);
     const off = subscribe({ status: load, linky: load }, load);
     return () => {
-      clearInterval(t);
+      clearInterval(timer);
       off();
     };
   }, [access?.authenticated]);
 
-  if (!access) return <div className="empty">Connexion au serveur…</div>;
+  if (!access)
+    return (
+      <div className="launch-screen">
+        <img src="/brand/wattelier-mark.svg" alt="" />
+        <p>Connexion à Wattelier…</p>
+      </div>
+    );
   if (access.error)
-    return <div className="empty">Le serveur Suivi Élec ne répond pas correctement.</div>;
+    return (
+      <div className="launch-screen error">
+        <img src="/brand/wattelier-mark.svg" alt="" />
+        <h1>Serveur indisponible</h1>
+        <p>Wattelier ne parvient pas à joindre son serveur local.</p>
+      </div>
+    );
   if (!access.onboardingCompleted)
     return <Onboarding tariffs={access.tariffs} onReady={refreshAccess} />;
   if (access.authRequired && !access.authenticated) return <ServerLogin onReady={refreshAccess} />;
 
-  const linkyState = !status
-    ? 'warn'
-    : !status.connectors?.linky
-      ? 'off'
-      : status.linky.lastError
-        ? 'err'
-        : !status.linky.configured
-          ? 'off'
-          : status.linky.waitingForData
-            ? 'warn'
-            : 'ok';
-  const sonoffState = !status
-    ? 'warn'
-    : !status.connectors?.ewelink
-      ? 'off'
-      : status.sonoff.lastError
-        ? 'err'
-        : !status.sonoff.configured
-          ? 'off'
-          : status.sonoff.cloudOnline || status.sonoff.lanDevices > 0
-            ? 'ok'
-            : 'warn';
+  const cycleTheme = () =>
+    setTheme(theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto');
+  const ThemeIcon = theme === 'auto' ? Laptop : theme === 'light' ? Sun : Moon;
 
-  const resolvedTheme = document.documentElement.dataset.theme || 'light';
+  const content = {
+    overview: <Overview />,
+    realtime: <RealTime />,
+    history: <History />,
+    devices: <Devices />,
+    advanced: <Advanced />,
+    billing: <Billing />,
+    settings: <Settings status={status} />,
+  }[page];
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <h1>⚡ Suivi élec</h1>
-        <div className="statuses">
-          <StatusPill
-            label="Linky"
-            state={linkyState}
-            title={
-              status?.linky?.lastError ||
-              (!status?.connectors?.linky ? 'Connecteur désactivé dans les Réglages' : '') ||
-              (status?.linky?.waitingForData
-                ? 'En attente des premières données Enedis (compteur récent)'
-                : '') ||
-              (!status?.linky?.configured
-                ? 'Token Conso API non configuré (Réglages)'
-                : `${status?.linky?.daysInDb ?? 0} jours en base`)
-            }
-          />
-          <StatusPill
-            label="Prises"
-            state={sonoffState}
-            title={
-              status?.sonoff?.lastError ||
-              (!status?.connectors?.ewelink ? 'Connecteur désactivé dans les Réglages' : '') ||
-              (!status?.sonoff?.configured
-                ? 'Identifiants eWeLink non configurés (Réglages)'
-                : `${status?.sonoff?.deviceCount ?? 0} prise(s), ${status?.sonoff?.lanDevices ?? 0} en LAN`)
-            }
-          />
-          {status?.demo && (
-            <StatusPill
-              label="Mode démo"
-              state="warn"
-              title="Données factices affichées — désactivable dans Réglages"
-            />
-          )}
-          <button
-            className="theme-btn"
-            onClick={() =>
-              setTheme(theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto')
-            }
-            title="Thème : auto → clair → sombre"
-          >
-            {theme === 'auto' ? '🌗 Auto' : theme === 'light' ? '☀️ Clair' : '🌙 Sombre'}
-          </button>
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <img src="/brand/wattelier-mark.svg" alt="" />
+          <span>Wattelier</span>
         </div>
-      </header>
+        <nav className="side-navigation" aria-label="Navigation principale">
+          {PAGES.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              className={page === id ? 'active' : ''}
+              aria-current={page === id ? 'page' : undefined}
+              onClick={() => setPage(id)}
+            >
+              <Icon size={19} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-status">
+          <div className="server-status">
+            <span className="pulse-dot" />
+            <span>
+              <strong>Serveur actif</strong>
+              <small>Réseau local · port {status?.server?.port || 3017}</small>
+            </span>
+          </div>
+          <div className="source-statuses">
+            <SourceStatus label="Linky" state={sourceState(status, 'linky')} />
+            <SourceStatus label="eWeLink" state={sourceState(status, 'ewelink')} />
+          </div>
+        </div>
+      </aside>
 
-      <nav className="tabs">
-        {TABS.map(([id, label]) => (
-          <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
-            {label}
+      <div className="workspace">
+        <header className="workspace-header">
+          <div>
+            <p>
+              {new Date().toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}
+            </p>
+            <h1>{current.label}</h1>
+          </div>
+          <div className="header-actions">
+            {status?.demo && <span className="demo-badge">Mode démo</span>}
+            <button
+              className="icon-button"
+              onClick={cycleTheme}
+              aria-label={`Thème ${theme}`}
+              title={`Thème : ${theme}`}
+            >
+              <ThemeIcon size={19} />
+            </button>
+          </div>
+        </header>
+        <main key={`${page}-${theme}`}>{content}</main>
+      </div>
+
+      <nav className="mobile-navigation" aria-label="Navigation mobile">
+        {PAGES.map(({ id, short, icon: Icon }) => (
+          <button
+            key={id}
+            className={page === id ? 'active' : ''}
+            aria-current={page === id ? 'page' : undefined}
+            onClick={() => setPage(id)}
+          >
+            <Icon size={18} />
+            <span>{short}</span>
           </button>
         ))}
       </nav>
-
-      <main key={`${tab}-${resolvedTheme}-${theme}`}>
-        {tab === 'realtime' && <RealTime />}
-        {tab === 'history' && <History />}
-        {tab === 'devices' && <Devices />}
-        {tab === 'advanced' && <Advanced />}
-        {tab === 'billing' && <Billing />}
-        {tab === 'settings' && <Settings status={status} />}
-      </main>
     </div>
   );
 }

@@ -2,6 +2,9 @@
 node_modules/
 dist/
 coverage/
+release/
+test-results/
+playwright-report/
 
 # Données locales — peuvent contenir des jetons Linky et des clés Sonoff
 data/

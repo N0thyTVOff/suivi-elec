@@ -1,4 +1,4 @@
-﻿# Relanceur « Suivi élec » : lance le serveur en boucle — s'il tombe (crash,
+# Relanceur « Wattelier » : lance le serveur en boucle — s'il tombe (crash,
 # redémarrage demandé par le chien de garde…), il repart après 5 secondes.
 # Journal : data\server.log (basculé vers server.old.log au-delà de 5 Mo).
 Set-Location $PSScriptRoot

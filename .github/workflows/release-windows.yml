@@ -1,0 +1,68 @@
+name: Release Windows
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag de la GitHub Release à compléter
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-windows-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Installateur et portable x64
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Construire les deux éditions Windows
+        run: npm run desktop:build
+      - name: Vérifier le contenu distribué
+        run: npm run package:validate
+      - name: Tester réellement l’installation et l’édition portable
+        shell: pwsh
+        run: ./scripts/smoke-windows-package.ps1
+      - name: Calculer les sommes SHA-256
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $assets = @(
+            "release/Wattelier-Setup-v$version-x64.exe",
+            "release/Wattelier-Portable-v$version-x64.exe"
+          )
+          $lines = foreach ($asset in $assets) {
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $asset).Hash.ToLowerInvariant()
+            "$hash  $([System.IO.Path]::GetFileName($asset))"
+          }
+          Set-Content -LiteralPath release/SHA256SUMS.txt -Value $lines -Encoding ascii
+      - name: Joindre uniquement les binaires à la release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = node -p "require('./package.json').version"
+          gh release upload $env:RELEASE_TAG `
+            "release/Wattelier-Setup-v$version-x64.exe" `
+            "release/Wattelier-Portable-v$version-x64.exe" `
+            "release/SHA256SUMS.txt" `
+            --clobber

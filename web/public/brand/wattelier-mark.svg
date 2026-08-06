@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Wattelier</title>
+  <desc id="desc">Monogramme W traversé par une impulsion électrique</desc>
+  <defs>
+    <linearGradient id="signal" x1="48" y1="32" x2="464" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5276ff"/>
+      <stop offset="1" stop-color="#2349dc"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#signal)"/>
+  <path d="M104 148l70 226 82-150 82 150 70-226" fill="none" stroke="#fff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M73 265h92l34-67 53 129 49-91 30 57h108" fill="none" stroke="#ff7ea8" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,7 +1,8 @@
 # Architecture
 
 ```text
-Navigateur React
+Navigateur React / app mobile
+  ├── jeton Bearer ou cookie HttpOnly
   ├── REST /api/* ──> Express ──> statistiques ──> SQLite locale
   └── SSE /api/events <───────── collecte Linky et Sonoff
                                       ├── Conso API (HTTPS)
@@ -19,9 +20,11 @@ cryptographie. `web/src/` contient l'interface React et les pages métier.
 - les données maison Linky et les mesures des prises sont comparées, jamais additionnées ;
 - les données `source='demo'` restent séparées des données réelles ;
 - les clés Sonoff, jetons, PRM et données SQLite ne quittent pas le stockage local ;
-- les réponses API ne renvoient ni `conso_token`, ni `apikey`, ni `devicekey` ;
+- les réponses API ne renvoient ni `conso_token`, ni mot de passe eWeLink, ni clé d'appareil ;
+- le jeton serveur n'est stocké que sous forme d'empreinte SHA-256 et n'est affiché qu'à sa création ;
 - une seule instance de collecte eWeLink doit fonctionner ;
 - les migrations existantes restent additives et compatibles avec une base déjà remplie.
 
-L'interface n'a pas d'authentification et suppose un réseau local de confiance. Une exposition à
-Internet exige une couche d'authentification, TLS, contrôle d'accès et revue de menace séparée.
+Les nouvelles installations exigent un jeton pour toute l'API. Le serveur écoute par défaut sur le
+réseau local ; une exposition à Internet exige toujours TLS ou un VPN. Le HTML statique et l'état
+minimal d'onboarding sont publics, mais aucune donnée énergétique n'est accessible sans jeton.

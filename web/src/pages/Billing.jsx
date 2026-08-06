@@ -175,7 +175,7 @@ export default function Billing() {
               <>
                 Au rythme actuel, vos 35 € mensuels sont <b>insuffisants</b> : une mensualité
                 d'environ <b>{fmtEur(b.idealMonthly)}</b> éviterait la régularisation. Vous pouvez
-                demander cet ajustement à EDF depuis votre espace client.
+                demander cet ajustement à votre fournisseur depuis votre espace client.
               </>
             ) : (
               <>
@@ -190,8 +190,7 @@ export default function Billing() {
 
       <div className="panel">
         <h2>
-          Échéancier{' '}
-          <span className="hint">vos prélèvements mensuels EDF (hors régularisation)</span>
+          Échéancier <span className="hint">vos prélèvements mensuels (hors régularisation)</span>
         </h2>
         <div className="row" style={{ marginBottom: 10 }}>
           <input
@@ -305,7 +304,7 @@ export default function Billing() {
         <p className="note" style={{ marginTop: 10 }}>
           Ces deux dates délimitent l'année de contrat couverte par votre échéancier : c'est sur
           cette période que la régularisation est calculée. Ajustez-les si elles ne correspondent
-          pas à votre contrat EDF.
+          pas à votre contrat.
         </p>
       </div>
     </>

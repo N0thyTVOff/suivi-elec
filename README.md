@@ -17,9 +17,10 @@ statistiques et la mensualisation. Les données sont conservées sur la machine 
 - consommation Linky quotidienne, courbe de charge et puissance maximale ;
 - puissance Sonoff en temps réel sur le LAN, historique et commande marche/arrêt ;
 - vues par jour, appareil, période, heatmap, veille, pics et projections ;
-- tarifs, budget mensuel et suivi des échéances ;
+- onboarding au premier démarrage et connecteurs Linky/eWeLink activables séparément ;
+- tarifs Base, HP/HC, Tempo, EJP ou personnalisés, budget et suivi des échéances ;
 - mode de démonstration, export CSV et journal d'événements ;
-- interface responsive accessible sur le réseau local.
+- interface responsive accessible sur le réseau avec API protégée par jeton.
 
 Une future application iOS est envisagée, mais ne fait pas partie de la version actuelle.
 
@@ -36,8 +37,10 @@ npm run build
 npm start
 ```
 
-Ouvrez ensuite <http://localhost:3017>. Le mode démo permet de découvrir l'interface sans compte
-ni matériel. Consultez [INSTALLATION.md](INSTALLATION.md) pour Linky, Sonoff et Windows.
+Ouvrez ensuite <http://localhost:3017>. L'assistant initial permet de choisir les connecteurs, le
+contrat et génère un jeton d'accès à conserver pour les autres appareils. Le mode démo permet de
+découvrir l'interface sans compte ni matériel. Consultez [INSTALLATION.md](INSTALLATION.md) pour
+Linky, Sonoff, l'accès distant et Windows.
 
 ## Configuration
 
@@ -49,8 +52,13 @@ Copiez `.env.example` vers `.env`, puis renseignez localement les variables util
 | `EWELINK_PASSWORD` | Sonoff uniquement | Mot de passe eWeLink             |
 | `EWELINK_REGION`   | Non               | Région eWeLink, `eu` par défaut  |
 | `PORT`             | Non               | Port HTTP, `3017` par défaut     |
+| `HOST`             | Non               | Adresse d'écoute, `0.0.0.0`      |
+| `TRUST_PROXY`      | Non               | `1` derrière un reverse proxy    |
+| `DATA_DIR`         | Non               | Stockage persistant, `./data`    |
 
-Le jeton Conso API et le PRM se saisissent dans Réglages. `.env`, `data/`, les journaux et les
+Les identifiants eWeLink peuvent également être saisis pendant l'onboarding ou dans Réglages ; les
+variables d'environnement restent disponibles pour les installations automatisées. Le jeton Conso
+API et le PRM se saisissent dans l'interface. `.env`, `data/`, les journaux et les
 archives sont ignorés par Git. Ne partagez jamais la base SQLite : elle peut contenir un jeton
 Linky, un PRM, des clés d'appareils et l'historique énergétique du logement.
 

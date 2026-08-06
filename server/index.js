@@ -16,17 +16,36 @@ import {
   listEvents,
   appEvents,
 } from './db.js';
-import { startLinky, syncRecent, backfill, linkyStatus, linkyEvents } from './linky.js';
-import { startSonoff, sonoffStatus, sonoffEvents, listDevices, setSwitch } from './sonoff/index.js';
+import { startLinky, stopLinky, syncRecent, backfill, linkyStatus, linkyEvents } from './linky.js';
+import {
+  startSonoff,
+  stopSonoff,
+  sonoffStatus,
+  sonoffEvents,
+  listDevices,
+  setSwitch,
+} from './sonoff/index.js';
 import { generateDemoData, demoTick } from './demo.js';
 import * as stats from './stats.js';
 import { isIsoDate, rowsToCsv } from './http-utils.js';
 import { editableSettings, toPublicSettings } from './public-settings.js';
+import {
+  authRequired,
+  clearAuthCookie,
+  isAuthorized,
+  issueAccessToken,
+  onboardingCompleted,
+  requireApiAuth,
+  setAuthCookie,
+} from './auth.js';
+import { supportedTariffs } from './tariffs.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3017;
+const HOST = process.env.HOST || '0.0.0.0';
 
 const app = express();
+if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
 app.use(express.json());
 app.use(
   '/api',
@@ -38,8 +57,69 @@ app.use(
     message: { error: 'trop de requêtes, réessayez dans quelques instants' },
   }),
 );
+const sensitiveLimit = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'trop de tentatives, réessayez plus tard' },
+});
 
 // ---------- API ----------
+
+// Ces trois routes sont les seules accessibles sans jeton. La configuration
+// initiale ne peut être exécutée qu'une fois.
+app.get('/api/setup/status', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    onboardingCompleted: onboardingCompleted(),
+    authRequired: authRequired(),
+    authenticated: onboardingCompleted() && isAuthorized(req),
+    tariffs: supportedTariffs(),
+  });
+});
+
+app.post('/api/setup/complete', sensitiveLimit, async (req, res) => {
+  if (onboardingCompleted()) {
+    return res.status(409).json({ error: 'la configuration initiale est déjà terminée' });
+  }
+  const settings = editableSettings(req.body);
+  for (const [key, value] of Object.entries(settings)) setSetting(key, value);
+  setSetting('linky_enabled', req.body?.linky_enabled ? '1' : '0');
+  setSetting('ewelink_enabled', req.body?.ewelink_enabled ? '1' : '0');
+  setSetting('onboarding_completed', '1');
+  const token = issueAccessToken();
+  setAuthCookie(req, res, token);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ ok: true, accessToken: token });
+  startLinky();
+  startSonoff().catch((err) => console.error('[sonoff] démarrage :', err.message));
+});
+
+app.post('/api/auth/session', sensitiveLimit, (req, res) => {
+  if (!onboardingCompleted()) {
+    return res.status(428).json({ error: 'configuration initiale requise' });
+  }
+  if (!authRequired()) return res.json({ ok: true });
+  const token = typeof req.body?.token === 'string' ? req.body.token : '';
+  if (!isAuthorized(req, token)) return res.status(401).json({ error: 'jeton invalide' });
+  setAuthCookie(req, res, token);
+  res.json({ ok: true });
+});
+
+app.use('/api', requireApiAuth);
+
+app.post('/api/auth/rotate', (req, res) => {
+  const token = issueAccessToken();
+  setAuthCookie(req, res, token);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ ok: true, accessToken: token });
+});
+
+app.delete('/api/auth/session', (req, res) => {
+  clearAuthCookie(res);
+  res.json({ ok: true });
+});
 
 app.get('/api/summary', (req, res) => res.json(stats.summary()));
 app.get('/api/daily', (req, res) => res.json(stats.dailySeries(Number(req.query.days) || 400)));
@@ -87,7 +167,7 @@ app.post('/api/devices/:id/switch', async (req, res) => {
 });
 
 // journal d'événements (le flux temps réel, lui, vit sur /api/events en SSE)
-// ---------- Mensualisation EDF (échéancier + régularisation) ----------
+// ---------- Facturation (échéancier + régularisation) ----------
 
 app.get('/api/billing', (req, res) => res.json(stats.billing()));
 
@@ -120,8 +200,13 @@ app.get('/api/status', (req, res) => {
   res.json({
     linky: linkyStatus,
     sonoff: sonoffStatus,
+    connectors: {
+      linky: getSetting('linky_enabled') === '1',
+      ewelink: getSetting('ewelink_enabled') === '1',
+    },
     demo: getSetting('demo_mode') === '1',
     urls,
+    server: { host: HOST, port: PORT, authEnabled: authRequired() },
   });
 });
 
@@ -134,6 +219,13 @@ app.post('/api/settings', async (req, res) => {
   const prevDemo = getSetting('demo_mode');
   const prevToken = getSetting('conso_token');
   const prevPrm = getSetting('prm');
+  const prevLinkyEnabled = getSetting('linky_enabled');
+  const prevEwelink = [
+    getSetting('ewelink_enabled'),
+    getSetting('ewelink_email'),
+    getSetting('ewelink_password'),
+    getSetting('ewelink_region'),
+  ].join('\0');
 
   for (const [key, value] of Object.entries(editableSettings(req.body))) {
     setSetting(key, value);
@@ -146,6 +238,20 @@ app.post('/api/settings', async (req, res) => {
   if (getSetting('conso_token') !== prevToken || getSetting('prm') !== prevPrm) {
     setSetting('linky_backfill_done', '0');
     syncRecent().then(() => backfill()); // en arrière-plan
+  }
+  if (getSetting('linky_enabled') !== prevLinkyEnabled) {
+    stopLinky();
+    startLinky();
+  }
+  const nextEwelink = [
+    getSetting('ewelink_enabled'),
+    getSetting('ewelink_email'),
+    getSetting('ewelink_password'),
+    getSetting('ewelink_region'),
+  ].join('\0');
+  if (nextEwelink !== prevEwelink) {
+    stopSonoff();
+    startSonoff().catch((err) => console.error('[sonoff] reconfiguration :', err.message));
   }
   res.setHeader('Cache-Control', 'no-store');
   res.json(toPublicSettings(allSettings()));
@@ -286,8 +392,8 @@ app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(dist, 'index.html
 
 // ---------- Démarrage ----------
 
-const server = app.listen(PORT, () => {
-  console.log(`Suivi élec démarré → http://localhost:${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+  console.log(`Suivi élec démarré → http://localhost:${PORT} (écoute ${HOST})`);
   recomputeManualDaily(); // ré-attribue les relevés manuels si la règle de calcul a évolué
   startLinky();
   startSonoff();

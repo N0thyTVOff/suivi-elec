@@ -15,22 +15,37 @@ npm run build
 npm start
 ```
 
-L'application écoute sur le port `3017`. Pour y accéder depuis un téléphone, utilisez une adresse
-locale affichée dans Réglages et gardez l'appareil sur le même réseau. N'exposez pas ce port sur
-Internet : l'application est conçue pour un réseau local de confiance et ne possède pas
-d'authentification utilisateur.
+L'application écoute sur `0.0.0.0:3017` et est donc joignable sur le réseau local. Au premier
+démarrage, l'assistant demande les sources d'énergie et le tarif, puis affiche une seule fois un
+jeton d'accès. Conservez-le dans un gestionnaire de mots de passe : il est nécessaire pour connecter
+un autre navigateur ou l'application mobile.
+
+Le jeton protège l'API, mais HTTP ne chiffre pas le trafic. Pour un accès depuis Internet, utilisez
+un VPN (par exemple Tailscale ou WireGuard) ou un reverse proxy HTTPS avec un certificat valide.
+Ne redirigez jamais directement le port `3017` sur la box Internet.
+
+Sous Windows, autorisez si nécessaire Node.js ou le port TCP 3017 dans le pare-feu uniquement pour
+le profil **Privé**. Les adresses locales utilisables sont affichées dans Réglages.
 
 ## Sonoff/eWeLink
 
-Renseignez `EWELINK_EMAIL`, `EWELINK_PASSWORD` et éventuellement `EWELINK_REGION` dans `.env`.
+Activez le connecteur pendant l'onboarding ou dans Réglages, puis saisissez le compte eWeLink.
+`EWELINK_EMAIL`, `EWELINK_PASSWORD` et `EWELINK_REGION` peuvent aussi être fournis dans `.env`.
 Les prises compatibles sont découvertes après redémarrage. Le premier accès cloud récupère des
 clés stockées dans `data/elec.db`, puis la collecte LAN peut continuer localement.
 
 ## Linky
 
 Activez la collecte horaire dans votre espace Enedis, obtenez un consentement et un jeton auprès
-de Conso API, puis saisissez le jeton et le PRM dans Réglages. Ces informations restent dans la
+de Conso API, puis activez le connecteur et saisissez le jeton et le PRM. Ces informations restent dans la
 base locale. Elles ne doivent jamais être jointes à une issue ou copiées dans Git.
+
+## Application mobile et API distante
+
+L'application mobile devra enregistrer une fois l'URL HTTPS du serveur et le jeton affiché pendant
+l'onboarding. Les clients natifs envoient `Authorization: Bearer <jeton>` à chaque appel `/api/*`.
+Le dashboard web échange ce jeton contre un cookie `HttpOnly` afin de sécuriser aussi le flux temps
+réel. Le jeton peut être renouvelé depuis Réglages ; l'ancien est alors immédiatement révoqué.
 
 ## Démarrage automatique sous Windows
 

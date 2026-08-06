@@ -289,12 +289,15 @@ export default function Advanced() {
       <div className="panel">
         <h2>Tarif appliqué</h2>
         <p className="note">
-          Base :{' '}
+          {adv.prices.tariff?.supplier || 'Fournisseur'} ·{' '}
+          {adv.prices.tariff?.offer || adv.prices.tariff?.type} :{' '}
           <b>
             {Number(adv.prices.kwh).toLocaleString('fr-FR', { minimumFractionDigits: 4 })} € / kWh
           </b>{' '}
           · abonnement <b>{fmtEur(adv.prices.subMonth)}</b> / mois · <b>{adv.prices.kva} kVA</b> —
-          modifiable dans les Réglages (reportez les valeurs exactes de votre facture EDF).
+          modifiable dans les Réglages.
+          {adv.prices.tariff?.estimated &&
+            ' Le prix moyen est estimé selon la répartition configurée des plages tarifaires.'}
         </p>
       </div>
     </>

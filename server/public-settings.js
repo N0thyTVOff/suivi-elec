@@ -1,9 +1,28 @@
 const EDITABLE_KEYS = new Set([
   'price_kwh',
+  'price_hp',
+  'price_hc',
+  'offpeak_share',
+  'tempo_blue_hp',
+  'tempo_blue_hc',
+  'tempo_white_hp',
+  'tempo_white_hc',
+  'tempo_red_hp',
+  'tempo_red_hc',
+  'ejp_normal',
+  'ejp_peak',
   'subscription_month',
   'kva',
+  'supplier_name',
+  'offer_name',
+  'tariff_type',
   'conso_token',
   'prm',
+  'linky_enabled',
+  'ewelink_enabled',
+  'ewelink_email',
+  'ewelink_password',
+  'ewelink_region',
   'demo_mode',
   'raw_retention_days',
   'budget_month_eur',
@@ -18,10 +37,17 @@ const EDITABLE_KEYS = new Set([
  */
 export function toPublicSettings(settings) {
   const token = settings.conso_token ?? '';
+  const ewelinkPassword = settings.ewelink_password ?? '';
+  const safe = { ...settings };
+  delete safe.server_token_hash;
   return {
-    ...settings,
+    ...safe,
     conso_token: '',
     conso_token_configured: Boolean(token),
+    ewelink_password: '',
+    ewelink_password_configured: Boolean(ewelinkPassword || process.env.EWELINK_PASSWORD),
+    ewelink_email: '',
+    ewelink_email_configured: Boolean(settings.ewelink_email || process.env.EWELINK_EMAIL),
   };
 }
 
@@ -39,10 +65,15 @@ export function editableSettings(body) {
   for (const [key, value] of Object.entries(source)) {
     if (!EDITABLE_KEYS.has(key)) continue;
     if (key === 'conso_token' && value === '' && source.clear_conso_token !== true) continue;
+    if (key === 'ewelink_password' && value === '' && source.clear_ewelink_password !== true)
+      continue;
+    if (key === 'ewelink_email' && value === '' && source.clear_ewelink_email !== true) continue;
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
       output[key] = String(value);
     }
   }
   if (source.clear_conso_token === true) output.conso_token = '';
+  if (source.clear_ewelink_password === true) output.ewelink_password = '';
+  if (source.clear_ewelink_email === true) output.ewelink_email = '';
   return output;
 }

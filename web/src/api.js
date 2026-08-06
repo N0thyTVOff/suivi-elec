@@ -1,6 +1,11 @@
 export async function api(path, options) {
-  const res = await fetch(`/api/${path}`, options);
-  if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
+  const res = await fetch(`/api/${path}`, { credentials: 'same-origin', ...options });
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}));
+    const error = new Error(payload.error || `API ${path} → ${res.status}`);
+    error.status = res.status;
+    throw error;
+  }
   return res.json();
 }
 

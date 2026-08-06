@@ -181,8 +181,7 @@ export default function RealTime() {
           <strong>Aucune prise détectée pour l'instant.</strong>
         </p>
         <p>
-          Renseignez vos identifiants eWeLink dans le fichier <code>.env</code> puis relancez
-          l'application,
+          Activez et configurez le connecteur eWeLink dans les Réglages,
           <br />
           ou activez le <em>mode démo</em> dans les Réglages pour explorer le dashboard avec des
           données factices.

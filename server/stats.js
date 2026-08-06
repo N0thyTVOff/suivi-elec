@@ -1,12 +1,15 @@
 import { db, getSetting } from './db.js';
+import { tariffSettings } from './tariffs.js';
 
 /** Toutes les agrégations servies au dashboard. Montants en €, énergies en kWh. */
 
 function prices() {
+  const tariff = tariffSettings();
   return {
-    kwh: Number(getSetting('price_kwh')) || 0,
-    subMonth: Number(getSetting('subscription_month')) || 0,
-    kva: Number(getSetting('kva')) || 6,
+    kwh: tariff.averageKwhRate,
+    subMonth: tariff.subscriptionMonth,
+    kva: tariff.kva,
+    tariff,
   };
 }
 
@@ -516,7 +519,7 @@ export function advanced() {
 }
 
 /**
- * Suivi de la mensualisation EDF : compare ce qui a été VERSÉ (échéances fixes)
+ * Suivi de la mensualisation : compare ce qui a été VERSÉ (échéances fixes)
  * à ce qui a été réellement CONSOMMÉ, et projette la facture de régularisation.
  *
  * La consommation n'étant mesurée que sur une partie de la période (compteur

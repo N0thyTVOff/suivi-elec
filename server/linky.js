@@ -165,6 +165,11 @@ function refreshCounters() {
 
 /** Synchro courante : les derniers jours (appelée toutes les heures). */
 export async function syncRecent() {
+  if (getSetting('linky_enabled') !== '1') {
+    linkyStatus.configured = false;
+    linkyStatus.lastError = null;
+    return;
+  }
   const token = getSetting('conso_token');
   const prm = getSetting('prm');
   linkyStatus.configured = Boolean(token && prm);
@@ -203,6 +208,7 @@ export async function syncRecent() {
  * des données (12 mois max). Sans effet si déjà fait ou si le compteur est trop récent.
  */
 export async function backfill() {
+  if (getSetting('linky_enabled') !== '1') return;
   const token = getSetting('conso_token');
   const prm = getSetting('prm');
   if (!token || !prm) return;
@@ -269,7 +275,14 @@ export async function backfill() {
 
 let timer = null;
 export function startLinky() {
+  stopLinky();
   refreshCounters();
+  if (getSetting('linky_enabled') !== '1') {
+    linkyStatus.configured = false;
+    linkyStatus.lastError = null;
+    linkyStatus.waitingForData = false;
+    return;
+  }
   // Au démarrage : synchro + rattrapage, puis synchro toutes les heures
   (async () => {
     await syncRecent();
@@ -279,4 +292,5 @@ export function startLinky() {
 }
 export function stopLinky() {
   if (timer) clearInterval(timer);
+  timer = null;
 }

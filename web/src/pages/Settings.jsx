@@ -5,6 +5,7 @@ export default function Settings({ status }) {
   const [settings, setSettings] = useState(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [newServerToken, setNewServerToken] = useState('');
 
   useEffect(() => {
     api('settings')
@@ -41,6 +42,16 @@ export default function Settings({ status }) {
     setSettings(next);
   };
 
+  const toggleConnector = async (key) => {
+    const next = await post('settings', { [key]: settings[key] === '1' ? '0' : '1' });
+    setSettings(next);
+  };
+
+  const rotateServerToken = async () => {
+    const result = await post('auth/rotate', {});
+    setNewServerToken(result.accessToken);
+  };
+
   return (
     <>
       <div className="panel">
@@ -66,7 +77,7 @@ export default function Settings({ status }) {
       </div>
 
       <div className="panel">
-        <h2>Tarif EDF (Base)</h2>
+        <h2>Contrat, tarifs et facturation</h2>
         <form
           className="settings"
           onSubmit={(e) => {
@@ -75,15 +86,124 @@ export default function Settings({ status }) {
           }}
         >
           <label>
-            Prix du kWh TTC (€)
-            <input
-              type="number"
-              step="0.0001"
-              min="0"
-              value={settings.price_kwh}
-              onChange={set('price_kwh')}
-            />
+            Fournisseur
+            <input value={settings.supplier_name} onChange={set('supplier_name')} />
           </label>
+          <label>
+            Nom de l’offre
+            <input value={settings.offer_name} onChange={set('offer_name')} />
+          </label>
+          <label>
+            Option tarifaire
+            <select value={settings.tariff_type} onChange={set('tariff_type')}>
+              <option value="base">Base</option>
+              <option value="hphc">Heures pleines / heures creuses</option>
+              <option value="tempo">Tempo</option>
+              <option value="ejp">EJP</option>
+              <option value="custom">Offre personnalisée / prix fixe</option>
+            </select>
+          </label>
+          {['base', 'custom'].includes(settings.tariff_type) && (
+            <label>
+              Prix du kWh TTC (€)
+              <input
+                type="number"
+                step="0.0001"
+                min="0"
+                value={settings.price_kwh}
+                onChange={set('price_kwh')}
+              />
+            </label>
+          )}
+          {settings.tariff_type === 'hphc' && (
+            <>
+              <label>
+                Prix heures pleines (€ / kWh)
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={settings.price_hp}
+                  onChange={set('price_hp')}
+                />
+              </label>
+              <label>
+                Prix heures creuses (€ / kWh)
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={settings.price_hc}
+                  onChange={set('price_hc')}
+                />
+              </label>
+            </>
+          )}
+          {settings.tariff_type === 'tempo' && (
+            <>
+              {[
+                ['tempo_blue_hp', 'Bleu · HP'],
+                ['tempo_blue_hc', 'Bleu · HC'],
+                ['tempo_white_hp', 'Blanc · HP'],
+                ['tempo_white_hc', 'Blanc · HC'],
+                ['tempo_red_hp', 'Rouge · HP'],
+                ['tempo_red_hc', 'Rouge · HC'],
+              ].map(([key, label]) => (
+                <label key={key}>
+                  {label} (€ / kWh)
+                  <input
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    value={settings[key]}
+                    onChange={set(key)}
+                  />
+                </label>
+              ))}
+            </>
+          )}
+          {settings.tariff_type === 'ejp' && (
+            <>
+              <label>
+                Prix jour normal (€ / kWh)
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={settings.ejp_normal}
+                  onChange={set('ejp_normal')}
+                />
+              </label>
+              <label>
+                Prix jour de pointe (€ / kWh)
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={settings.ejp_peak}
+                  onChange={set('ejp_peak')}
+                />
+              </label>
+            </>
+          )}
+          {['hphc', 'tempo'].includes(settings.tariff_type) && (
+            <label>
+              Part estimée en heures creuses (%)
+              <input
+                type="number"
+                step="1"
+                min="0"
+                max="100"
+                value={Math.round(Number(settings.offpeak_share) * 100)}
+                onChange={(event) =>
+                  setSettings((current) => ({
+                    ...current,
+                    offpeak_share: String(Number(event.target.value) / 100),
+                  }))
+                }
+              />
+            </label>
+          )}
           <label>
             Abonnement mensuel TTC (€)
             <input
@@ -126,15 +246,26 @@ export default function Settings({ status }) {
           </label>
         </form>
         <p className="note">
-          Reportez les valeurs exactes de votre facture EDF (rubrique « caractéristiques de votre
-          contrat »). Le budget mensuel affiche une jauge de suivi et une alerte de dépassement
-          prévisionnel dans les Stats avancées. Le « reste non mesuré » (conso maison − prises) est
-          décrit dans l'onglet Par appareil : indiquez ce qu'il contient chez vous.
+          Reportez les valeurs TTC exactes de votre fournisseur. Les offres Base, HP/HC, Tempo, EJP
+          et personnalisées sont prises en charge. Pour les offres variables, la facture est une
+          estimation basée sur votre part d’heures creuses et l’historique disponible. Le budget
+          mensuel affiche une jauge de suivi et une alerte de dépassement prévisionnel dans les
+          Stats avancées. Le « reste non mesuré » (conso maison − prises) est décrit dans l'onglet
+          Par appareil : indiquez ce qu'il contient chez vous.
         </p>
       </div>
 
       <div className="panel">
         <h2>Compteur Linky (Conso API)</h2>
+        <div className="row" style={{ marginBottom: 14 }}>
+          <button
+            className="btn secondary"
+            type="button"
+            onClick={() => toggleConnector('linky_enabled')}
+          >
+            {settings.linky_enabled === '1' ? '✓ Connecteur activé' : 'Connecteur désactivé'}
+          </button>
+        </div>
         <form
           className="settings"
           onSubmit={(e) => {
@@ -191,13 +322,81 @@ export default function Settings({ status }) {
       </div>
 
       <div className="panel">
+        <h2>Prises Sonoff (eWeLink)</h2>
+        <div className="row" style={{ marginBottom: 14 }}>
+          <button
+            className="btn secondary"
+            type="button"
+            onClick={() => toggleConnector('ewelink_enabled')}
+          >
+            {settings.ewelink_enabled === '1' ? '✓ Connecteur activé' : 'Connecteur désactivé'}
+          </button>
+        </div>
+        <form
+          className="settings"
+          onSubmit={(event) => {
+            event.preventDefault();
+            save();
+          }}
+        >
+          <label>
+            E-mail eWeLink
+            <input
+              type="email"
+              value={settings.ewelink_email}
+              onChange={set('ewelink_email')}
+              placeholder={
+                settings.ewelink_email_configured
+                  ? 'E-mail enregistré — laissez vide pour le conserver'
+                  : 'adresse@exemple.fr'
+              }
+            />
+          </label>
+          <label>
+            Mot de passe eWeLink
+            <input
+              type="password"
+              value={settings.ewelink_password}
+              onChange={set('ewelink_password')}
+              placeholder={
+                settings.ewelink_password_configured
+                  ? 'Mot de passe enregistré — laissez vide pour le conserver'
+                  : 'Mot de passe du compte eWeLink'
+              }
+            />
+          </label>
+          <label>
+            Région
+            <select value={settings.ewelink_region} onChange={set('ewelink_region')}>
+              <option value="eu">Europe</option>
+              <option value="us">Amériques</option>
+              <option value="as">Asie</option>
+              <option value="cn">Chine</option>
+            </select>
+          </label>
+        </form>
+        <div className="row" style={{ marginTop: 12 }}>
+          <button className="btn" onClick={save} disabled={saving}>
+            Enregistrer eWeLink
+          </button>
+        </div>
+        <p className="note">
+          Les identifiants restent dans la base locale et ne sont jamais renvoyés par l’API. Un
+          compte eWeLink dédié est recommandé.
+        </p>
+      </div>
+
+      <div className="panel">
         <h2>État des connexions</h2>
         <table className="data">
           <tbody>
             <tr>
               <td>Linky (Conso API)</td>
               <td>
-                {!status?.linky?.configured && 'Non configuré — renseignez le token ci-dessus'}
+                {settings.linky_enabled !== '1' && 'Désactivé'}
+                {settings.linky_enabled === '1' &&
+                  !status?.linky?.configured &&
+                  'Activé, mais non configuré — renseignez le token ci-dessus'}
                 {status?.linky?.configured && status.linky.lastError && (
                   <span style={{ color: 'var(--crit)' }}>Erreur : {status.linky.lastError}</span>
                 )}
@@ -214,12 +413,10 @@ export default function Settings({ status }) {
             <tr>
               <td>Prises Sonoff (eWeLink)</td>
               <td>
-                {!status?.sonoff?.configured && (
-                  <>
-                    Non configuré — remplissez <code>EWELINK_EMAIL</code> et{' '}
-                    <code>EWELINK_PASSWORD</code> dans le fichier <code>.env</code> puis relancez
-                  </>
-                )}
+                {settings.ewelink_enabled !== '1' && 'Désactivé'}
+                {settings.ewelink_enabled === '1' &&
+                  !status?.sonoff?.configured &&
+                  'Activé, mais non configuré — renseignez les identifiants ci-dessus'}
                 {status?.sonoff?.configured && status.sonoff.lastError && (
                   <span style={{ color: 'var(--crit)' }}>Erreur : {status.sonoff.lastError}</span>
                 )}
@@ -230,6 +427,40 @@ export default function Settings({ status }) {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div className="panel">
+        <h2>Sécurité du serveur et application mobile</h2>
+        <p className="note">
+          Le même jeton fonctionne avec le dashboard web et la future application mobile. Dans
+          l’app, il suffira d’enregistrer une fois l’adresse HTTPS du serveur et ce jeton.
+        </p>
+        {status?.server?.authEnabled === false && (
+          <p className="warning-note">
+            Cette installation existait avant l’ajout de l’authentification. Générez un jeton
+            maintenant avant d’autoriser un accès depuis un autre appareil.
+          </p>
+        )}
+        <button className="btn" type="button" onClick={rotateServerToken}>
+          Générer ou renouveler le jeton d’accès
+        </button>
+        {newServerToken && (
+          <div className="token-box" style={{ marginTop: 14 }}>
+            <code>{newServerToken}</code>
+            <button
+              className="btn secondary"
+              onClick={() => navigator.clipboard?.writeText(newServerToken)}
+            >
+              Copier
+            </button>
+          </div>
+        )}
+        {newServerToken && (
+          <p className="warning-note">
+            Copiez-le maintenant : l’ancien jeton est révoqué et cette valeur ne sera plus affichée
+            après avoir quitté la page.
+          </p>
+        )}
       </div>
 
       <div className="panel">
@@ -259,7 +490,8 @@ export default function Settings({ status }) {
         </div>
         <p className="note" style={{ marginTop: 8 }}>
           Le PC doit rester allumé (voir <code>install-startup.ps1</code> pour le démarrage
-          automatique).
+          automatique). Pour un accès distant, utilisez un nom de domaine HTTPS, un reverse proxy ou
+          un VPN comme Tailscale. Ne redirigez pas directement ce port HTTP sur Internet.
         </p>
       </div>
 

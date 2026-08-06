@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url';
 export const appEvents = new EventEmitter();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.join(__dirname, '..', 'data');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 export const db = new Database(path.join(DATA_DIR, 'elec.db'));
@@ -65,7 +67,7 @@ CREATE TABLE IF NOT EXISTS meter_index (
   created   INTEGER
 );
 
--- Échéancier de mensualisation EDF (montants fixes prélevés, hors régularisation)
+-- Échéancier de mensualisation (montants fixes prélevés, hors régularisation)
 CREATE TABLE IF NOT EXISTS installments (
   date   TEXT PRIMARY KEY,
   amount REAL NOT NULL
@@ -103,17 +105,43 @@ CREATE INDEX IF NOT EXISTS idx_readings_ts ON plug_readings (ts);
 CREATE INDEX IF NOT EXISTS idx_hourly_start ON plug_energy_hourly (hour_start);
 `);
 
-// Valeurs par défaut (Tarif Bleu EDF Base — à ajuster dans Réglages selon la facture)
+const hadExistingSettings = db.prepare('SELECT COUNT(*) AS n FROM settings').get().n > 0;
+
+// Valeurs par défaut. Une installation existante conserve son comportement :
+// l'onboarding et l'authentification ne lui sont pas imposés brutalement.
 const DEFAULT_SETTINGS = {
   price_kwh: '0.2016', // €/kWh TTC
   subscription_month: '13.09', // € TTC / mois (abonnement)
   kva: '6', // puissance souscrite
+  supplier_name: 'EDF',
+  offer_name: 'Tarif Bleu',
+  tariff_type: 'base', // base, hphc, tempo, ejp ou custom
+  price_hp: '0.2146',
+  price_hc: '0.1696',
+  offpeak_share: '0.40',
+  tempo_blue_hp: '0.1609',
+  tempo_blue_hc: '0.1296',
+  tempo_white_hp: '0.1894',
+  tempo_white_hc: '0.1486',
+  tempo_red_hp: '0.7562',
+  tempo_red_hc: '0.1568',
+  ejp_normal: '0.1758',
+  ejp_peak: '1.5197',
   conso_token: '', // token Conso API (conso.boris.sh)
   prm: '', // numéro PRM / PDL (14 chiffres)
+  linky_enabled: hadExistingSettings ? '1' : '0',
+  ewelink_enabled:
+    hadExistingSettings && process.env.EWELINK_EMAIL && process.env.EWELINK_PASSWORD ? '1' : '0',
+  ewelink_email: '',
+  ewelink_password: '',
+  ewelink_region: process.env.EWELINK_REGION || 'eu',
+  onboarding_completed: hadExistingSettings ? '1' : '0',
+  server_auth_enabled: hadExistingSettings ? '0' : '1',
+  server_token_hash: '',
   demo_mode: '0',
   raw_retention_days: '30',
   budget_month_eur: '', // objectif de facture mensuelle (vide = désactivé)
-  // Période de facturation EDF (mensualisation) : bornes de la régularisation
+  // Période de facturation (mensualisation) : bornes de la régularisation
   billing_start: new Date().toISOString().slice(0, 10), // à adapter au contrat
   billing_end: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
     .toISOString()

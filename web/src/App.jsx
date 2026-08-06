@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api, subscribe } from './api.js';
 import RealTime from './pages/RealTime.jsx';
 import History from './pages/History.jsx';
@@ -6,6 +6,7 @@ import Devices from './pages/Devices.jsx';
 import Advanced from './pages/Advanced.jsx';
 import Billing from './pages/Billing.jsx';
 import Settings from './pages/Settings.jsx';
+import Onboarding, { ServerLogin } from './pages/Onboarding.jsx';
 
 const TABS = [
   ['realtime', 'Temps réel'],
@@ -37,7 +38,18 @@ function StatusPill({ label, state, title }) {
 export default function App() {
   const [tab, setTab] = useState('realtime');
   const [status, setStatus] = useState(null);
+  const [access, setAccess] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'auto');
+
+  const refreshAccess = useCallback(
+    () =>
+      api('setup/status')
+        .then(setAccess)
+        .catch(() => setAccess({ error: true })),
+    [],
+  );
+
+  useEffect(refreshAccess, [refreshAccess]);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
@@ -52,6 +64,7 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    if (!access?.authenticated) return undefined;
     const load = () =>
       api('status')
         .then(setStatus)
@@ -63,26 +76,37 @@ export default function App() {
       clearInterval(t);
       off();
     };
-  }, []);
+  }, [access?.authenticated]);
+
+  if (!access) return <div className="empty">Connexion au serveur…</div>;
+  if (access.error)
+    return <div className="empty">Le serveur Suivi Élec ne répond pas correctement.</div>;
+  if (!access.onboardingCompleted)
+    return <Onboarding tariffs={access.tariffs} onReady={refreshAccess} />;
+  if (access.authRequired && !access.authenticated) return <ServerLogin onReady={refreshAccess} />;
 
   const linkyState = !status
     ? 'warn'
-    : status.linky.lastError
-      ? 'err'
-      : !status.linky.configured
-        ? 'off'
-        : status.linky.waitingForData
-          ? 'warn'
-          : 'ok';
+    : !status.connectors?.linky
+      ? 'off'
+      : status.linky.lastError
+        ? 'err'
+        : !status.linky.configured
+          ? 'off'
+          : status.linky.waitingForData
+            ? 'warn'
+            : 'ok';
   const sonoffState = !status
     ? 'warn'
-    : status.sonoff.lastError
-      ? 'err'
-      : !status.sonoff.configured
-        ? 'off'
-        : status.sonoff.cloudOnline || status.sonoff.lanDevices > 0
-          ? 'ok'
-          : 'warn';
+    : !status.connectors?.ewelink
+      ? 'off'
+      : status.sonoff.lastError
+        ? 'err'
+        : !status.sonoff.configured
+          ? 'off'
+          : status.sonoff.cloudOnline || status.sonoff.lanDevices > 0
+            ? 'ok'
+            : 'warn';
 
   const resolvedTheme = document.documentElement.dataset.theme || 'light';
 
@@ -96,6 +120,7 @@ export default function App() {
             state={linkyState}
             title={
               status?.linky?.lastError ||
+              (!status?.connectors?.linky ? 'Connecteur désactivé dans les Réglages' : '') ||
               (status?.linky?.waitingForData
                 ? 'En attente des premières données Enedis (compteur récent)'
                 : '') ||
@@ -109,8 +134,9 @@ export default function App() {
             state={sonoffState}
             title={
               status?.sonoff?.lastError ||
+              (!status?.connectors?.ewelink ? 'Connecteur désactivé dans les Réglages' : '') ||
               (!status?.sonoff?.configured
-                ? 'Identifiants eWeLink absents du .env'
+                ? 'Identifiants eWeLink non configurés (Réglages)'
                 : `${status?.sonoff?.deviceCount ?? 0} prise(s), ${status?.sonoff?.lanDevices ?? 0} en LAN`)
             }
           />

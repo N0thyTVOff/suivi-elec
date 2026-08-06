@@ -19,6 +19,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "test": "node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-functions=90 --test-coverage-branches=85",
+    "test:smoke": "node scripts/smoke-onboarding.js",
     "typecheck": "tsc --noEmit",
     "validate:repo": "node scripts/validate-repository.js",
     "audit": "npm audit --omit=dev --audit-level=high",

@@ -395,9 +395,15 @@ function loadRegistryFromDb() {
 
 export async function startSonoff() {
   stopSonoff(); // idempotent : nettoie toute incarnation précédente (timers, sockets)
-  const email = process.env.EWELINK_EMAIL;
-  const password = process.env.EWELINK_PASSWORD;
-  const region = process.env.EWELINK_REGION || 'eu';
+  if (getSetting('ewelink_enabled') !== '1') {
+    sonoffStatus.configured = false;
+    sonoffStatus.lastError = null;
+    console.log('[sonoff] connecteur eWeLink désactivé');
+    return;
+  }
+  const email = getSetting('ewelink_email') || process.env.EWELINK_EMAIL;
+  const password = getSetting('ewelink_password') || process.env.EWELINK_PASSWORD;
+  const region = getSetting('ewelink_region') || process.env.EWELINK_REGION || 'eu';
   sonoffStatus.configured = Boolean(email && password);
   if (!sonoffStatus.configured) {
     console.log('[sonoff] EWELINK_EMAIL / EWELINK_PASSWORD absents du .env — module inactif');
@@ -615,4 +621,8 @@ export function stopSonoff() {
   } catch {
     /* déjà arrêté */
   }
+  cloud = null;
+  lan = null;
+  sonoffStatus.cloudOnline = false;
+  sonoffStatus.lanDevices = 0;
 }

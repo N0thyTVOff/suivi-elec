@@ -17,7 +17,11 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      - name: Jeton Release Please non configuré
+        if: ${{ secrets.RELEASE_PLEASE_TOKEN == '' }}
+        run: echo 'Ajoutez RELEASE_PLEASE_TOKEN dans les secrets Actions pour automatiser les Release PR.'
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        if: ${{ secrets.RELEASE_PLEASE_TOKEN != '' }}
         with:
           # Un jeton finement limité permet de garder l'approbation des PR interdite aux workflows.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}

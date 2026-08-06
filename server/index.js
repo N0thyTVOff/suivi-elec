@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
@@ -27,6 +28,16 @@ const PORT = Number(process.env.PORT) || 3017;
 
 const app = express();
 app.use(express.json());
+app.use(
+  '/api',
+  rateLimit({
+    windowMs: 60_000,
+    limit: 300,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'trop de requêtes, réessayez dans quelques instants' },
+  }),
+);
 
 // ---------- API ----------
 

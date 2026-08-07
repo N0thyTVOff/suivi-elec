@@ -7,6 +7,8 @@ export default function Settings({ status }) {
   const [saving, setSaving] = useState(false);
   const [newServerToken, setNewServerToken] = useState('');
   const [desktopInfo, setDesktopInfo] = useState(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState('');
 
   useEffect(() => {
     api('settings')
@@ -62,6 +64,30 @@ export default function Settings({ status }) {
     setDesktopInfo((current) => ({ ...current, ...result }));
   };
 
+  const toggleAutomaticUpdates = async () => {
+    const result = await window.wattelierDesktop.setAutomaticUpdates(!desktopInfo.automaticUpdates);
+    setDesktopInfo((current) => ({
+      ...current,
+      automaticUpdates: result.automaticUpdates,
+    }));
+  };
+
+  const checkForUpdates = async () => {
+    setCheckingUpdate(true);
+    setUpdateMessage('');
+    try {
+      const result = await window.wattelierDesktop.checkForUpdates();
+      setUpdateMessage(
+        result.message ||
+          (result.availableVersion
+            ? `Wattelier ${result.availableVersion} est disponible.`
+            : 'Recherche terminée.'),
+      );
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
   return (
     <>
       {desktopInfo && (
@@ -99,6 +125,44 @@ export default function Settings({ status }) {
               version portable.
             </p>
           )}
+          <div className="row" style={{ marginTop: 16, justifyContent: 'space-between' }}>
+            <div>
+              <b>Mises à jour</b>
+              <p className="note" style={{ margin: '4px 0 0' }}>
+                Wattelier vérifie les nouvelles versions au démarrage.
+                {desktopInfo.portable
+                  ? ' Le téléchargement reste manuel en mode portable.'
+                  : ' Vous choisissez si leur téléchargement et leur installation sont automatiques.'}
+              </p>
+            </div>
+            {!desktopInfo.portable && (
+              <div
+                className={`toggle ${desktopInfo.automaticUpdates ? 'on' : ''}`}
+                onClick={toggleAutomaticUpdates}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') toggleAutomaticUpdates();
+                }}
+                role="switch"
+                tabIndex="0"
+                aria-checked={desktopInfo.automaticUpdates}
+                aria-label="Installer automatiquement les mises à jour"
+              >
+                <span className="track" />
+                <span>Mises à jour automatiques</span>
+              </div>
+            )}
+          </div>
+          <div className="row" style={{ marginTop: 12 }}>
+            <button
+              className="btn secondary"
+              type="button"
+              onClick={checkForUpdates}
+              disabled={checkingUpdate}
+            >
+              {checkingUpdate ? 'Recherche…' : 'Rechercher une mise à jour'}
+            </button>
+            {updateMessage && <span className="note">{updateMessage}</span>}
+          </div>
         </div>
       )}
 

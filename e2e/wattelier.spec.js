@@ -3,6 +3,24 @@ import { expect, test } from '@playwright/test';
 test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, context }) => {
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
+  await page.addInitScript(() => {
+    let automaticUpdates = false;
+    window.wattelierDesktop = {
+      getRuntimeInfo: async () => ({
+        version: '2.1.2',
+        mode: 'installed',
+        portable: false,
+        openAtLogin: true,
+        automaticUpdates,
+      }),
+      setOpenAtLogin: async (enabled) => ({ openAtLogin: enabled, portable: false }),
+      setAutomaticUpdates: async (enabled) => {
+        automaticUpdates = enabled;
+        return { automaticUpdates, phase: 'idle' };
+      },
+      checkForUpdates: async () => ({ phase: 'up-to-date', message: 'Wattelier est à jour.' }),
+    };
+  });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Bienvenue dans Wattelier' })).toBeVisible();
   await expect(page.getByRole('checkbox', { name: /Prises Omajin/ })).toBeVisible();
@@ -51,6 +69,14 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Prises Omajin OSP-FR-01 (Tuya)' })).toBeVisible();
   await expect(page.getByLabel('Access ID Tuya')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Application Windows' })).toBeVisible();
+  const automaticUpdates = page.getByRole('switch', {
+    name: 'Installer automatiquement les mises à jour',
+  });
+  await automaticUpdates.click();
+  await expect(automaticUpdates).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Rechercher une mise à jour' }).click();
+  await expect(page.getByText('Wattelier est à jour.')).toBeVisible();
 
   const themeButton = page.getByRole('button', { name: /Thème/ });
   await themeButton.click();

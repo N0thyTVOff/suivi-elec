@@ -111,9 +111,11 @@ Les issues publiques documentées sont bienvenues. La création et la fusion des
 réservées au mainteneur ; consultez [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Release Please maintient une Release PR groupée. Sa fusion crée la release, puis le workflow
-Windows construit, contrôle et joint uniquement l’installateur, l’édition portable et leurs sommes
-SHA-256. Les archives de sources générées automatiquement par GitHub restent disponibles pour
-l’AGPL. Aucun mécanisme de mise à jour automatique n’est inclus dans Wattelier 2.0.
+Windows construit et contrôle l’installateur et l’édition portable. Il joint aussi leurs sommes
+SHA-256 et les métadonnées minimales nécessaires à la détection des mises à jour. L’édition
+installée peut télécharger et installer automatiquement une nouvelle version si l’utilisateur
+l’active dans les réglages ; l’édition portable prévient et ouvre le téléchargement manuel. Les
+archives de sources générées automatiquement par GitHub restent disponibles pour l’AGPL.
 
 ## Sécurité et licence
 

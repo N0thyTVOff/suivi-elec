@@ -12,11 +12,17 @@ import {
   isTrustedDesktopUrl,
   requestSingleInstance,
 } from '../desktop/policy.js';
+import { readDesktopPreferences, writeDesktopPreferences } from '../desktop/preferences.js';
 import {
   loginItemOptions,
   resolveDesktopAssetPath,
   resolveRuntimePaths,
 } from '../desktop/runtime-paths.js';
+import {
+  githubReleaseUrl,
+  isNewerWattelierVersion,
+  parseWattelierVersion,
+} from '../desktop/update-policy.js';
 
 const execFileAsync = promisify(execFile);
 const childEnvironment = { ...process.env };
@@ -32,6 +38,7 @@ test('résout les chemins installé et portable sans mélanger les données', ()
   assert.equal(installed.dataDirectory, path.resolve(installed.dataDirectory));
   assert.equal(path.basename(installed.dataDirectory), 'app-data');
   assert.equal(path.basename(installed.databasePath), 'elec.db');
+  assert.equal(path.basename(installed.preferencesPath), 'desktop-preferences.json');
 
   const portable = resolveRuntimePaths({
     portableDirectory: path.join('D:', 'Apps', 'Wattelier'),
@@ -107,22 +114,95 @@ test('la politique Electron limite l’instance, l’origine IPC et les informat
     mode: 'installed',
     portable: false,
     openAtLogin: true,
+    automaticUpdates: false,
   });
-  assert.deepEqual(desktopRuntimeInfo({ version: '2.0.0', portable: true, openAtLogin: true }), {
-    version: '2.0.0',
-    mode: 'portable',
-    portable: true,
-    openAtLogin: false,
-  });
+  assert.deepEqual(
+    desktopRuntimeInfo({
+      version: '2.0.0',
+      portable: true,
+      openAtLogin: true,
+      automaticUpdates: true,
+    }),
+    {
+      version: '2.0.0',
+      mode: 'portable',
+      portable: true,
+      openAtLogin: false,
+      automaticUpdates: false,
+    },
+  );
 });
 
-test('le preload n’expose que les deux méthodes autorisées', () => {
+test('le preload n’expose que les méthodes de bureau autorisées', () => {
   const preload = fs.readFileSync(new URL('../desktop/preload.cjs', import.meta.url), 'utf8');
   const exposedMethods = [...preload.matchAll(/^\s{2}([a-zA-Z]+):/gm)].map((match) => match[1]);
-  assert.deepEqual(exposedMethods, ['getRuntimeInfo', 'setOpenAtLogin']);
+  assert.deepEqual(exposedMethods, [
+    'getRuntimeInfo',
+    'setOpenAtLogin',
+    'setAutomaticUpdates',
+    'checkForUpdates',
+  ]);
   assert.match(preload, /wattelier:get-runtime-info/);
   assert.match(preload, /wattelier:set-open-at-login/);
+  assert.match(preload, /wattelier:set-automatic-updates/);
+  assert.match(preload, /wattelier:check-for-updates/);
   assert.doesNotMatch(preload, /require\(['"](?:node:)?(?:fs|child_process)/);
+});
+
+test('le bureau relie la détection de mise à jour à une source GitHub sûre', () => {
+  const main = fs.readFileSync(new URL('../desktop/main.js', import.meta.url), 'utf8');
+  const updater = fs.readFileSync(new URL('../desktop/updater.js', import.meta.url), 'utf8');
+  const builder = fs.readFileSync(new URL('../electron-builder.yml', import.meta.url), 'utf8');
+  const releaseWorkflow = fs.readFileSync(
+    new URL('../.github/workflows/release-windows.yml', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(main, /wattelier:set-automatic-updates/);
+  assert.match(main, /wattelier:check-for-updates/);
+  assert.match(main, /setTimeout\(\(\) => updater\.checkForUpdates\(\), 10_000\)/);
+  assert.match(updater, /api\.github\.com\/repos\/N0thyTVOff\/wattelier\/releases\/latest/);
+  assert.match(updater, /autoUpdater\.autoDownload = false/);
+  assert.match(updater, /autoUpdater\.quitAndInstall\(false, true\)/);
+  assert.match(builder, /provider: github/);
+  assert.match(builder, /repo: wattelier/);
+  assert.match(releaseWorkflow, /release\/latest\.yml/);
+  assert.match(releaseWorkflow, /\.exe\.blockmap/);
+});
+
+test('les préférences de mise à jour sont locales, validées et écrites atomiquement', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'wattelier-preferences-test-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const filename = path.join(directory, 'nested', 'desktop-preferences.json');
+
+  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: false });
+  assert.deepEqual(writeDesktopPreferences(filename, { automaticUpdates: true, secret: 'non' }), {
+    automaticUpdates: true,
+  });
+  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: true });
+  assert.equal(fs.existsSync(`${filename}.tmp`), false);
+
+  fs.writeFileSync(filename, '{invalide');
+  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: false });
+  fs.writeFileSync(filename, JSON.stringify({ automaticUpdates: 'oui' }));
+  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: false });
+});
+
+test('la détection de version accepte les tags Wattelier et verrouille les liens GitHub', () => {
+  assert.deepEqual(parseWattelierVersion('wattelier-v2.3.4'), [2, 3, 4]);
+  assert.deepEqual(parseWattelierVersion('v3.0.0-beta.1'), [3, 0, 0]);
+  assert.equal(parseWattelierVersion('version récente'), null);
+  assert.equal(isNewerWattelierVersion('2.2.0', '2.1.9'), true);
+  assert.equal(isNewerWattelierVersion('2.1.9', '2.2.0'), false);
+  assert.equal(isNewerWattelierVersion('2.1.9', '2.1.9'), false);
+  assert.equal(isNewerWattelierVersion('invalide', '2.1.9'), false);
+  assert.equal(
+    githubReleaseUrl('https://github.com/N0thyTVOff/wattelier/releases/tag/wattelier-v2.2.0'),
+    'https://github.com/N0thyTVOff/wattelier/releases/tag/wattelier-v2.2.0',
+  );
+  assert.equal(githubReleaseUrl('http://github.com/N0thyTVOff/wattelier/releases/latest'), null);
+  assert.equal(githubReleaseUrl('https://example.com/N0thyTVOff/wattelier/releases/latest'), null);
+  assert.equal(githubReleaseUrl('adresse invalide'), null);
 });
 
 test('le smoke test Windows reste analysable et attend la libération des exécutables', () => {

@@ -1,10 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell, Tray } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, shell, Tray } from 'electron';
 import { importLegacyDatabase } from './legacy-import.js';
 import { desktopRuntimeInfo, isTrustedDesktopUrl, requestSingleInstance } from './policy.js';
+import { readDesktopPreferences, writeDesktopPreferences } from './preferences.js';
 import { loginItemOptions, resolveDesktopAssetPath, resolveRuntimePaths } from './runtime-paths.js';
+import { createDesktopUpdater } from './updater.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3017;
@@ -19,6 +21,8 @@ let stopServer;
 let quitting = false;
 let serverReady = false;
 let runtimePaths;
+let desktopPreferences;
+let updater;
 
 function desktopAsset(filename) {
   return resolveDesktopAssetPath({
@@ -54,6 +58,7 @@ function registerDesktopBridge() {
       version: app.getVersion(),
       portable: runtimePaths.portable,
       openAtLogin: currentLoginState(),
+      automaticUpdates: desktopPreferences.automaticUpdates,
     });
   });
   ipcMain.handle('wattelier:set-open-at-login', (event, enabled) => {
@@ -64,6 +69,19 @@ function registerDesktopBridge() {
       openAtLogin: Boolean(enabled),
     });
     return { openAtLogin: currentLoginState(), portable: false };
+  });
+  ipcMain.handle('wattelier:set-automatic-updates', (event, enabled) => {
+    if (!isTrustedSender(event)) throw new Error('Origine non autorisée');
+    if (runtimePaths.portable) return updater.getStatus();
+    desktopPreferences = writeDesktopPreferences(runtimePaths.preferencesPath, {
+      ...desktopPreferences,
+      automaticUpdates: Boolean(enabled),
+    });
+    return updater.refreshAutomaticUpdates();
+  });
+  ipcMain.handle('wattelier:check-for-updates', (event) => {
+    if (!isTrustedSender(event)) throw new Error('Origine non autorisée');
+    return updater.checkForUpdates({ manual: true });
   });
 }
 
@@ -152,6 +170,10 @@ function createTray() {
         label: serverReady ? 'Serveur actif sur le port 3017' : 'Démarrage du serveur…',
         enabled: false,
       },
+      {
+        label: 'Rechercher une mise à jour',
+        click: () => updater.checkForUpdates({ manual: true }),
+      },
       { type: 'separator' },
       { label: 'Quitter Wattelier', click: () => app.quit() },
     ]),
@@ -164,6 +186,7 @@ async function startApplication() {
     portableDirectory,
     userDataDirectory: app.getPath('userData'),
   });
+  desktopPreferences = readDesktopPreferences(runtimePaths.preferencesPath);
   fs.mkdirSync(runtimePaths.logsDirectory, { recursive: true });
   app.setAppLogsPath(runtimePaths.logsDirectory);
   await offerLegacyImport();
@@ -188,9 +211,23 @@ async function startApplication() {
       fs.writeFileSync(marker, '1');
     }
   }
+  updater = createDesktopUpdater({
+    app,
+    dialog,
+    net,
+    shell,
+    portable: runtimePaths.portable,
+    getAutomaticUpdates: () => desktopPreferences.automaticUpdates,
+    beforeInstall: async () => {
+      quitting = true;
+      await stopServer?.();
+    },
+    getWindow: () => mainWindow,
+  });
   registerDesktopBridge();
   createTray();
   createWindow();
+  setTimeout(() => updater.checkForUpdates(), 10_000);
 }
 
 app.on('second-instance', showWindow);

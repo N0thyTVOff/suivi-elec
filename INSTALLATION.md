@@ -12,6 +12,8 @@ Wattelier depuis le menu Démarrer ou le raccourci du Bureau.
 - les données sont stockées dans `%APPDATA%\Wattelier\app-data` ;
 - le démarrage à l’ouverture de session est activé par défaut avec une fenêtre cachée ;
 - l’option peut être désactivée dans **Réglages → Application Windows** ;
+- Wattelier vérifie les nouvelles versions au démarrage et peut les installer automatiquement si
+  vous activez l’option dans **Réglages → Application Windows** ;
 - fermer la fenêtre masque Wattelier dans la zone de notification sans arrêter la collecte ;
 - **Quitter Wattelier** dans la zone de notification arrête réellement le serveur.
 
@@ -27,6 +29,8 @@ ce dossier ensemble.
 
 Le démarrage automatique est volontairement indisponible en mode portable. Ne lancez pas deux
 copies de Wattelier avec les mêmes appareils : l’application bloque une seconde instance sur le PC.
+La version portable signale les nouvelles releases, mais son remplacement reste manuel afin que le
+dossier `Wattelier-data` demeure sous votre contrôle.
 
 ## Vérifier le téléchargement
 

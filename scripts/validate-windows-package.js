@@ -7,11 +7,13 @@ const releaseDirectory = path.resolve('release');
 const asarPath = path.join(releaseDirectory, 'win-unpacked', 'resources', 'app.asar');
 const expectedArtifacts = [
   `Wattelier-Setup-v${packageJson.version}-x64.exe`,
+  `Wattelier-Setup-v${packageJson.version}-x64.exe.blockmap`,
   `Wattelier-Portable-v${packageJson.version}-x64.exe`,
+  'latest.yml',
 ];
 const allowedDirectories = ['/desktop', '/server', '/dist', '/node_modules'];
 const allowedFiles = ['/package.json', '/LICENSE', '/NOTICE'];
-const expectedResources = ['tray.ico', 'icon.png'];
+const expectedResources = ['tray.ico', 'icon.png', 'app-update.yml'];
 const forbiddenPatterns = [
   /(^|\/)\.env(?:\.|$)/i,
   /^\/data\//i,

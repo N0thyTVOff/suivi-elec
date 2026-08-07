@@ -19,7 +19,10 @@ Navigateur React / future app mobile
 `desktop/main.js` gère le cycle de vie Windows et appelle `startServer()`/`stopServer()` sans
 dupliquer le backend. En mode installé, les données résident dans
 `%APPDATA%\Wattelier\app-data` ; en mode portable, elles résident dans `Wattelier-data` à côté de
-l'exécutable. `server/index.js` expose l'API, le flux SSE et le build statique. `server/db.js`
+l'exécutable. `desktop/updater.js` vérifie les releases GitHub ; l’installateur NSIS peut appliquer
+une mise à jour, tandis que l’édition portable conserve un remplacement manuel. Le choix
+d’installation automatique réside dans `desktop-preferences.json`, à côté des autres données
+locales. `server/index.js` expose l'API, le flux SSE et le build statique. `server/db.js`
 possède le schéma SQLite et les migrations additives. `server/stats.js` contient les agrégations.
 `server/linky.js` gère la synchronisation et le rattrapage. `server/sonoff/` sépare cloud,
 découverte LAN et cryptographie. `server/omajin/` contient le client OpenAPI Tuya signé, la

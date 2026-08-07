@@ -38,4 +38,8 @@ nsis:
 portable:
   artifactName: Wattelier-Portable-v${version}-${arch}.${ext}
   requestExecutionLevel: user
-publish: null
+publish:
+  provider: github
+  owner: N0thyTVOff
+  repo: wattelier
+  releaseType: release

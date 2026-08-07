@@ -35,7 +35,7 @@
   "dependencies": {
     "better-sqlite3": "^13.0.2",
     "dotenv": "^17.4.2",
-    "express": "^4.21.2",
+    "express": "^5.2.1",
     "express-rate-limit": "^8.6.2",
     "multicast-dns": "^7.2.5",
     "ws": "^8.21.2"

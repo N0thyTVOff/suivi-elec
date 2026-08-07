@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.1.0...wattelier-v2.1.1) (2026-08-07)
+
+
+### Corrections
+
+* **desktop:** embarque les icônes Electron ([#22](https://github.com/N0thyTVOff/wattelier/issues/22)) ([61f9fe5](https://github.com/N0thyTVOff/wattelier/commit/61f9fe500dd06930389013b43239474d9c8c0260))
+
 ## [2.1.0](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.0.0...wattelier-v2.1.0) (2026-08-07)
 
 

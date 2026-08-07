@@ -49,7 +49,8 @@ réponses HTTP. Ne les publiez jamais dans une issue, un journal ou une capture 
 - **Permission denied** : le compte Smart Life n’est pas lié au projet avec les droits d’écriture,
   ou les services API requis ne sont pas autorisés.
 - **Device not found** : le Device ID ou le centre de données ne correspond pas au projet.
-- **Aucune puissance** : vérifiez dans Tuya que la prise expose `cur_power`. Wattelier lit aussi
+- **Aucune puissance** : vérifiez dans Tuya que la prise expose `cur_power`. Wattelier relève les
+  mesures toutes les 10 secondes et relit à 2 puis 5 secondes après une commande. Wattelier lit aussi
   `cur_voltage`, `cur_current`, `add_ele` et découvre automatiquement leur facteur d’échelle.
 - **Commande non disponible** : le produit doit exposer `switch_1`, `switch` ou `switch_led` dans
   son jeu d’instructions Tuya.

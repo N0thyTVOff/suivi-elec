@@ -3,7 +3,7 @@ import Chart from '../Chart.jsx';
 import { api, post, subscribe, fmtW, fmtKwh, fmtEur } from '../api.js';
 import { chartTheme, baseAxes } from '../theme.js';
 
-// fraîcheur d'un relevé : couvre la cadence LAN (~10 s) comme la cadence cloud (~60 s)
+// fraîcheur d'un relevé : couvre plusieurs cycles des collecteurs (~10 s)
 const FRESH_MS = 150_000;
 
 export default function RealTime() {

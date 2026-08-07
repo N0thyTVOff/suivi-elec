@@ -2,6 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { signTuyaRequest, TUYA_ENDPOINTS, TuyaCloudClient } from '../server/omajin/client.js';
 import { normalizeOmajinStatus, parseOmajinDevices } from '../server/omajin/model.js';
+import {
+  OMAJIN_COMMAND_REFRESH_DELAYS_MS,
+  OMAJIN_POLL_INTERVAL_MS,
+  scheduleOmajinCommandRefresh,
+} from '../server/omajin/timing.js';
 
 /** @param {unknown} payload @param {number} [status] */
 function jsonResponse(payload, status = 200) {
@@ -175,6 +180,29 @@ test('les mesures Omajin tolèrent les fonctions absentes et spécifications inv
   assert.equal(result.switchState, 'off');
   assert.equal(result.watts, 1.5);
   assert.equal(result.amps, null);
+});
+
+test('la collecte Omajin relit rapidement après une commande potentiellement encore en cache', () => {
+  /** @type {Array<{callback: () => void, delay: number}>} */
+  const scheduled = [];
+  let unrefCount = 0;
+  const refresh = () => {};
+  const timers = scheduleOmajinCommandRefresh(refresh, (callback, delay) => {
+    scheduled.push({ callback, delay });
+    return { unref: () => (unrefCount += 1) };
+  });
+
+  assert.equal(OMAJIN_POLL_INTERVAL_MS, 10_000);
+  assert.deepEqual(OMAJIN_COMMAND_REFRESH_DELAYS_MS, [2_000, 5_000]);
+  assert.deepEqual(
+    scheduled.map(({ callback, delay }) => ({ sameCallback: callback === refresh, delay })),
+    [
+      { sameCallback: true, delay: 2_000 },
+      { sameCallback: true, delay: 5_000 },
+    ],
+  );
+  assert.equal(timers.length, 2);
+  assert.equal(unrefCount, 2);
 });
 
 test('la liste Omajin accepte les noms, séparateurs et doublons mais refuse un numéro de série', () => {

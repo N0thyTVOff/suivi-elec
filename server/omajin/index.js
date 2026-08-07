@@ -2,8 +2,8 @@ import { EventEmitter } from 'node:events';
 import { addEvent, addHourlyWh, db, getSetting, insertReading, upsertDevice } from '../db.js';
 import { TuyaCloudClient } from './client.js';
 import { normalizeOmajinStatus, parseOmajinDevices } from './model.js';
+import { OMAJIN_POLL_INTERVAL_MS, scheduleOmajinCommandRefresh } from './timing.js';
 
-const POLL_INTERVAL_MS = 60_000;
 const MAX_INTEGRATION_GAP_MS = 5 * 60_000;
 const DEVICE_PREFIX = 'tuya:';
 
@@ -185,7 +185,7 @@ export async function startOmajin() {
     for (const device of devices) await loadDevice(device);
     omajinStatus.deviceCount = registry.size;
     await pollOmajin();
-    pollTimer = setInterval(pollOmajin, POLL_INTERVAL_MS);
+    pollTimer = setInterval(pollOmajin, OMAJIN_POLL_INTERVAL_MS);
     pollTimer.unref?.();
   } catch (error) {
     omajinStatus.cloudOnline = false;
@@ -212,7 +212,7 @@ export async function setOmajinSwitch(deviceId, on) {
     deviceId,
     0,
   );
-  setTimeout(pollOmajin, 2_000).unref?.();
+  scheduleOmajinCommandRefresh(pollOmajin);
   return state;
 }
 

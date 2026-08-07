@@ -38,6 +38,11 @@ function sourceState(status, source) {
     if (status.linky.lastError) return 'error';
     return status.linky.waitingForData ? 'pending' : 'ok';
   }
+  if (source === 'omajin') {
+    if (!status.connectors?.omajin || !status.omajin.configured) return 'off';
+    if (status.omajin.lastError) return 'error';
+    return status.omajin.cloudOnline ? 'ok' : 'pending';
+  }
   if (!status.connectors?.ewelink || !status.sonoff.configured) return 'off';
   if (status.sonoff.lastError) return 'error';
   return status.sonoff.cloudOnline || status.sonoff.lanDevices > 0 ? 'ok' : 'pending';
@@ -159,6 +164,7 @@ export default function App() {
           <div className="source-statuses">
             <SourceStatus label="Linky" state={sourceState(status, 'linky')} />
             <SourceStatus label="eWeLink" state={sourceState(status, 'ewelink')} />
+            <SourceStatus label="Omajin" state={sourceState(status, 'omajin')} />
           </div>
         </div>
       </aside>

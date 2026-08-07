@@ -33,6 +33,10 @@ test('toPublicSettings ne renvoie jamais le jeton Linky', () => {
       ewelink_password_configured: true,
       ewelink_email: '',
       ewelink_email_configured: false,
+      tuya_access_id: '',
+      tuya_access_id_configured: false,
+      tuya_access_secret: '',
+      tuya_access_secret_configured: false,
     },
   );
 });
@@ -63,6 +67,20 @@ test('editableSettings filtre les clés et préserve un jeton masqué', () => {
   );
   assert.deepEqual(editableSettings([]), {});
   assert.deepEqual(editableSettings(null), {});
+  assert.deepEqual(
+    editableSettings({
+      omajin_enabled: true,
+      tuya_access_id: '',
+      tuya_access_secret: '',
+      tuya_region: 'eu',
+      tuya_device_ids: 'device123',
+    }),
+    { omajin_enabled: 'true', tuya_region: 'eu', tuya_device_ids: 'device123' },
+  );
+  assert.deepEqual(
+    editableSettings({ clear_tuya_access_id: true, clear_tuya_access_secret: true }),
+    { tuya_access_id: '', tuya_access_secret: '' },
+  );
 });
 
 test('toPublicSettings masque aussi les identifiants eWeLink absents ou présents', () => {
@@ -79,8 +97,31 @@ test('toPublicSettings masque aussi les identifiants eWeLink absents ou présent
       ewelink_email_configured: true,
       ewelink_password: '',
       ewelink_password_configured: false,
+      tuya_access_id: '',
+      tuya_access_id_configured: false,
+      tuya_access_secret: '',
+      tuya_access_secret_configured: false,
     },
   );
+});
+
+test('toPublicSettings masque toujours les clés du projet Tuya', () => {
+  const settings = /** @type {Record<string, unknown>} */ (
+    toPublicSettings({
+      conso_token: '',
+      ewelink_email: '',
+      ewelink_password: '',
+      tuya_access_id: 'access-id',
+      tuya_access_secret: 'access-secret',
+      tuya_device_ids: 'device123',
+    })
+  );
+  assert.equal(settings.tuya_access_id, '');
+  assert.equal(settings.tuya_access_secret, '');
+  assert.equal(settings.tuya_access_id_configured, true);
+  assert.equal(settings.tuya_access_secret_configured, true);
+  assert.equal(settings.tuya_device_ids, 'device123');
+  assert.equal(JSON.stringify(settings).includes('access-secret'), false);
 });
 
 test('les jetons serveur sont comparés par empreinte', () => {

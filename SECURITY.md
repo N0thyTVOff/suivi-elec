@@ -20,9 +20,11 @@ Le jeton assure l'authentification, pas le chiffrement. L'application doit reste
 pare-feu et ne doit pas être publiée directement en HTTP sur Internet : utilisez un VPN ou un
 reverse proxy HTTPS. La base
 `data/elec.db` et `.env` sont sensibles : ils peuvent contenir identifiants eWeLink, jeton et PRM
-Linky, clés Sonoff, habitudes de consommation et noms d'appareils.
+Linky, clés Sonoff, Access ID/Secret Tuya, identifiants d’appareils, habitudes de consommation et
+noms d'appareils.
 
-Utilisez si possible un compte eWeLink dédié, protégez les sauvegardes, limitez les permissions du
-compte système et renouvelez tout secret suspecté compromis. Les réponses API masquent les clés,
-les mots de passe et les jetons externes, mais toute personne ayant accès à la machine peut lire les
-fichiers locaux. Le jeton serveur est affiché uniquement à sa création ou à son renouvellement.
+Utilisez si possible un compte eWeLink dédié et un projet Tuya limité aux appareils nécessaires,
+protégez les sauvegardes, limitez les permissions du compte système et renouvelez tout secret
+suspecté compromis. Les réponses API masquent les clés, les mots de passe et les jetons externes,
+mais toute personne ayant accès à la machine peut lire les fichiers locaux. Le jeton serveur est
+affiché uniquement à sa création ou à son renouvellement.

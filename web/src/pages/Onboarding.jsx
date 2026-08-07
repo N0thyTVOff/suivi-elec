@@ -4,11 +4,16 @@ import { post } from '../api.js';
 const defaults = {
   linky_enabled: true,
   ewelink_enabled: false,
+  omajin_enabled: false,
   prm: '',
   conso_token: '',
   ewelink_email: '',
   ewelink_password: '',
   ewelink_region: 'eu',
+  tuya_access_id: '',
+  tuya_access_secret: '',
+  tuya_region: 'eu',
+  tuya_device_ids: '',
   supplier_name: 'EDF',
   offer_name: 'Tarif Bleu',
   tariff_type: 'base',
@@ -89,6 +94,13 @@ export default function Onboarding({ tariffs, onReady }) {
                 <b>Prises Sonoff · eWeLink</b>
                 <small>Puissance en temps réel et détail par appareil.</small>
               </Toggle>
+              <Toggle
+                checked={form.omajin_enabled}
+                onChange={(value) => setForm((v) => ({ ...v, omajin_enabled: value }))}
+              >
+                <b>Prises Omajin · Tuya</b>
+                <small>OSP-FR-01 : puissance, consommation et marche/arrêt.</small>
+              </Toggle>
             </div>
             {form.linky_enabled && (
               <div className="settings onboarding-fields">
@@ -124,6 +136,42 @@ export default function Onboarding({ tariffs, onReady }) {
                     <option value="as">Asie</option>
                     <option value="cn">Chine</option>
                   </select>
+                </label>
+              </div>
+            )}
+            {form.omajin_enabled && (
+              <div className="settings onboarding-fields">
+                <label>
+                  Access ID Tuya
+                  <input value={form.tuya_access_id} onChange={set('tuya_access_id')} />
+                </label>
+                <label>
+                  Access Secret Tuya
+                  <input
+                    type="password"
+                    value={form.tuya_access_secret}
+                    onChange={set('tuya_access_secret')}
+                  />
+                </label>
+                <label>
+                  Centre de données
+                  <select value={form.tuya_region} onChange={set('tuya_region')}>
+                    <option value="eu">Europe centrale (France)</option>
+                    <option value="eu-west">Europe occidentale</option>
+                    <option value="us">Amérique occidentale</option>
+                    <option value="us-east">Amérique orientale</option>
+                    <option value="cn">Chine</option>
+                    <option value="in">Inde</option>
+                    <option value="sg">Singapour</option>
+                  </select>
+                </label>
+                <label style={{ gridColumn: '1 / -1' }}>
+                  Identifiant de la prise Tuya
+                  <input
+                    value={form.tuya_device_ids}
+                    onChange={set('tuya_device_ids')}
+                    placeholder="bf1234567890abcdef"
+                  />
                 </label>
               </div>
             )}

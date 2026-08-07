@@ -181,7 +181,7 @@ export default function RealTime() {
           <strong>Aucune prise détectée pour l'instant.</strong>
         </p>
         <p>
-          Activez et configurez le connecteur eWeLink dans les Réglages,
+          Activez et configurez le connecteur eWeLink ou Omajin dans les Réglages,
           <br />
           ou activez le <em>mode démo</em> dans les Réglages pour explorer le dashboard avec des
           données factices.
@@ -267,7 +267,7 @@ export default function RealTime() {
       <div className="panel">
         <h2>
           Puissance totale des prises{' '}
-          <span className="hint">~10 s en liaison locale, ~1 min via le cloud eWeLink</span>
+          <span className="hint">~10 s en liaison locale Sonoff, ~1 min via le cloud</span>
         </h2>
         {totalSeries.length < 2 ? (
           <div className="empty">En attente des premiers relevés…</div>
@@ -349,7 +349,7 @@ export default function RealTime() {
           </table>
         </div>
         <p className="note" style={{ marginTop: 8 }}>
-          L'interrupteur ⏻ agit réellement sur la prise (réseau local en priorité, cloud sinon).
+          L'interrupteur ⏻ agit réellement sur la prise (LAN Sonoff ou cloud du fabricant).
         </p>
       </div>
 

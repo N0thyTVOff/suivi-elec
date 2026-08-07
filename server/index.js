@@ -26,6 +26,14 @@ import {
   listDevices,
   setSwitch,
 } from './sonoff/index.js';
+import {
+  isOmajinDevice,
+  omajinEvents,
+  omajinStatus,
+  setOmajinSwitch,
+  startOmajin,
+  stopOmajin,
+} from './omajin/index.js';
 import { generateDemoData, demoTick } from './demo.js';
 import * as stats from './stats.js';
 import { isIsoDate, rowsToCsv } from './http-utils.js';
@@ -98,6 +106,7 @@ app.post('/api/setup/complete', sensitiveLimit, async (req, res) => {
   for (const [key, value] of Object.entries(settings)) setSetting(key, value);
   setSetting('linky_enabled', req.body?.linky_enabled ? '1' : '0');
   setSetting('ewelink_enabled', req.body?.ewelink_enabled ? '1' : '0');
+  setSetting('omajin_enabled', req.body?.omajin_enabled ? '1' : '0');
   setSetting('onboarding_completed', '1');
   const token = issueAccessToken();
   setAuthCookie(req, res, token);
@@ -105,6 +114,7 @@ app.post('/api/setup/complete', sensitiveLimit, async (req, res) => {
   res.json({ ok: true, accessToken: token });
   startLinky();
   startSonoff().catch((err) => console.error('[sonoff] démarrage :', err.message));
+  startOmajin().catch((err) => console.error('[omajin] démarrage :', err.message));
 });
 
 app.post('/api/auth/session', sensitiveLimit, (req, res) => {
@@ -170,7 +180,9 @@ app.get('/api/devices/hourly', (req, res) => {
 
 app.post('/api/devices/:id/switch', async (req, res) => {
   try {
-    const state = await setSwitch(req.params.id, Boolean(req.body.on));
+    const state = isOmajinDevice(req.params.id)
+      ? await setOmajinSwitch(req.params.id, Boolean(req.body.on))
+      : await setSwitch(req.params.id, Boolean(req.body.on));
     res.json({ ok: true, state });
   } catch (err) {
     res.status(502).json({ error: err.message });
@@ -211,9 +223,11 @@ app.get('/api/status', (req, res) => {
   res.json({
     linky: linkyStatus,
     sonoff: sonoffStatus,
+    omajin: omajinStatus,
     connectors: {
       linky: getSetting('linky_enabled') === '1',
       ewelink: getSetting('ewelink_enabled') === '1',
+      omajin: getSetting('omajin_enabled') === '1',
     },
     demo: getSetting('demo_mode') === '1',
     urls,
@@ -236,6 +250,13 @@ app.post('/api/settings', async (req, res) => {
     getSetting('ewelink_email'),
     getSetting('ewelink_password'),
     getSetting('ewelink_region'),
+  ].join('\0');
+  const prevOmajin = [
+    getSetting('omajin_enabled'),
+    getSetting('tuya_access_id'),
+    getSetting('tuya_access_secret'),
+    getSetting('tuya_region'),
+    getSetting('tuya_device_ids'),
   ].join('\0');
 
   for (const [key, value] of Object.entries(editableSettings(req.body))) {
@@ -263,6 +284,17 @@ app.post('/api/settings', async (req, res) => {
   if (nextEwelink !== prevEwelink) {
     stopSonoff();
     startSonoff().catch((err) => console.error('[sonoff] reconfiguration :', err.message));
+  }
+  const nextOmajin = [
+    getSetting('omajin_enabled'),
+    getSetting('tuya_access_id'),
+    getSetting('tuya_access_secret'),
+    getSetting('tuya_region'),
+    getSetting('tuya_device_ids'),
+  ].join('\0');
+  if (nextOmajin !== prevOmajin) {
+    stopOmajin();
+    startOmajin().catch((err) => console.error('[omajin] reconfiguration :', err.message));
   }
   res.setHeader('Cache-Control', 'no-store');
   res.json(toPublicSettings(allSettings()));
@@ -363,6 +395,8 @@ function broadcast(event, data) {
 
 sonoffEvents.on('reading', (r) => broadcast('reading', r));
 sonoffEvents.on('status', () => broadcast('status', { sonoff: sonoffStatus }));
+omajinEvents.on('reading', (r) => broadcast('reading', r));
+omajinEvents.on('status', () => broadcast('status', { omajin: omajinStatus }));
 linkyEvents.on('updated', () => broadcast('linky', { at: Date.now() }));
 appEvents.on('event', (ev) => broadcast('notice', ev));
 
@@ -428,6 +462,7 @@ export async function startServer({ host = DEFAULT_HOST, port = DEFAULT_PORT, da
   recomputeManualDaily();
   startLinky();
   startSonoff().catch((error) => console.error('[sonoff] démarrage :', error.message));
+  startOmajin().catch((error) => console.error('[omajin] démarrage :', error.message));
   purgeOldReadings();
   startBackgroundTimers();
   return { server: activeServer, host: activeHost, port: activePort, dataDir: DATA_DIR };
@@ -436,6 +471,7 @@ export async function startServer({ host = DEFAULT_HOST, port = DEFAULT_PORT, da
 export async function stopServer() {
   stopLinky();
   stopSonoff();
+  stopOmajin();
   for (const timer of appTimers) clearInterval(timer);
   appTimers.clear();
   for (const client of sseClients) client.end();

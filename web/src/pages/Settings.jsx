@@ -439,6 +439,88 @@ export default function Settings({ status }) {
       </div>
 
       <div className="panel">
+        <h2>Prises Omajin OSP-FR-01 (Tuya)</h2>
+        <div className="row" style={{ marginBottom: 14 }}>
+          <button
+            className="btn secondary"
+            type="button"
+            onClick={() => toggleConnector('omajin_enabled')}
+          >
+            {settings.omajin_enabled === '1' ? '✓ Connecteur activé' : 'Connecteur désactivé'}
+          </button>
+        </div>
+        <form
+          className="settings"
+          onSubmit={(event) => {
+            event.preventDefault();
+            save();
+          }}
+        >
+          <label>
+            Access ID Tuya
+            <input
+              type="password"
+              value={settings.tuya_access_id}
+              onChange={set('tuya_access_id')}
+              placeholder={
+                settings.tuya_access_id_configured
+                  ? 'Access ID enregistré — laissez vide pour le conserver'
+                  : 'Access ID du projet Cloud Tuya'
+              }
+            />
+          </label>
+          <label>
+            Access Secret Tuya
+            <input
+              type="password"
+              value={settings.tuya_access_secret}
+              onChange={set('tuya_access_secret')}
+              placeholder={
+                settings.tuya_access_secret_configured
+                  ? 'Secret enregistré — laissez vide pour le conserver'
+                  : 'Access Secret du projet Cloud Tuya'
+              }
+            />
+          </label>
+          <label>
+            Centre de données
+            <select value={settings.tuya_region} onChange={set('tuya_region')}>
+              <option value="eu">Europe centrale (France)</option>
+              <option value="eu-west">Europe occidentale</option>
+              <option value="us">Amérique occidentale</option>
+              <option value="us-east">Amérique orientale</option>
+              <option value="cn">Chine</option>
+              <option value="in">Inde</option>
+              <option value="sg">Singapour</option>
+            </select>
+          </label>
+          <label style={{ gridColumn: '1 / -1' }}>
+            Appareils Tuya
+            <textarea
+              value={settings.tuya_device_ids}
+              onChange={set('tuya_device_ids')}
+              placeholder={'Un identifiant par ligne\nExemple : bf1234567890abcdef=Prise du salon'}
+            />
+          </label>
+        </form>
+        <div className="row" style={{ marginTop: 12 }}>
+          <button className="btn" onClick={save} disabled={saving}>
+            Enregistrer Omajin
+          </button>
+        </div>
+        <p className="note">
+          L’OSP-FR-01 utilise Tuya Smart Life. Associez la prise à l’application Smart Life, créez
+          un projet Cloud sur{' '}
+          <a href="https://platform.tuya.com" target="_blank" rel="noreferrer">
+            platform.tuya.com
+          </a>
+          , liez votre compte Smart Life au projet puis recopiez l’Access ID, l’Access Secret et
+          l’identifiant de l’appareil. Le numéro de série imprimé sur la prise n’est pas cet
+          identifiant. Les secrets restent exclusivement dans la base locale.
+        </p>
+      </div>
+
+      <div className="panel">
         <h2>État des connexions</h2>
         <table className="data">
           <tbody>
@@ -475,6 +557,21 @@ export default function Settings({ status }) {
                 {status?.sonoff?.configured &&
                   !status.sonoff.lastError &&
                   `${status.sonoff.deviceCount} prise(s) avec mesure de puissance · cloud ${status.sonoff.cloudOnline ? 'connecté' : 'déconnecté'} · ${status.sonoff.lanDevices} appareil(s) vus sur le réseau local`}
+              </td>
+            </tr>
+            <tr>
+              <td>Prises Omajin (Tuya)</td>
+              <td>
+                {settings.omajin_enabled !== '1' && 'Désactivé'}
+                {settings.omajin_enabled === '1' &&
+                  !status?.omajin?.configured &&
+                  'Activé, mais non configuré — renseignez le projet Tuya et la prise ci-dessus'}
+                {status?.omajin?.configured && status.omajin.lastError && (
+                  <span style={{ color: 'var(--crit)' }}>Erreur : {status.omajin.lastError}</span>
+                )}
+                {status?.omajin?.configured &&
+                  !status.omajin.lastError &&
+                  `${status.omajin.deviceCount} prise(s) · cloud ${status.omajin.cloudOnline ? 'connecté' : 'déconnecté'}${status.omajin.lastSync ? ` · dernière mesure ${new Date(status.omajin.lastSync).toLocaleTimeString('fr-FR')}` : ''}`}
               </td>
             </tr>
           </tbody>

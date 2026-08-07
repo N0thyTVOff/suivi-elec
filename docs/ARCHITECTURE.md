@@ -9,10 +9,11 @@ Application Windows (Electron) ──> démarre/arrête le même serveur Express
 Navigateur React / future app mobile
   ├── jeton Bearer ou cookie HttpOnly
   ├── REST /api/* ──> Express ──> statistiques ──> SQLite locale
-  └── SSE /api/events <───────── collecte Linky et Sonoff
+  └── SSE /api/events <───────── collecte Linky, Sonoff et Omajin
                                       ├── Conso API (HTTPS)
                                       ├── eWeLink (HTTPS/WebSocket)
-                                      └── Sonoff LAN (mDNS/HTTP chiffré)
+                                      ├── Sonoff LAN (mDNS/HTTP chiffré)
+                                      └── Tuya Cloud (HTTPS signé)
 ```
 
 `desktop/main.js` gère le cycle de vie Windows et appelle `startServer()`/`stopServer()` sans
@@ -21,14 +22,17 @@ dupliquer le backend. En mode installé, les données résident dans
 l'exécutable. `server/index.js` expose l'API, le flux SSE et le build statique. `server/db.js`
 possède le schéma SQLite et les migrations additives. `server/stats.js` contient les agrégations.
 `server/linky.js` gère la synchronisation et le rattrapage. `server/sonoff/` sépare cloud,
-découverte LAN et cryptographie. `web/src/` contient l'interface React et les pages métier.
+découverte LAN et cryptographie. `server/omajin/` contient le client OpenAPI Tuya signé, la
+normalisation des points de données et la collecte OSP-FR-01. `web/src/` contient l'interface React
+et les pages métier.
 
 ## Invariants
 
 - les données maison Linky et les mesures des prises sont comparées, jamais additionnées ;
 - les données `source='demo'` restent séparées des données réelles ;
-- les clés Sonoff, jetons, PRM et données SQLite ne quittent pas le stockage local ;
-- les réponses API ne renvoient ni `conso_token`, ni mot de passe eWeLink, ni clé d'appareil ;
+- les clés Sonoff, clés de projet Tuya, jetons, PRM et données SQLite ne quittent pas le stockage local ;
+- les réponses API ne renvoient ni `conso_token`, ni mot de passe eWeLink, ni clé d'appareil, ni
+  `tuya_access_id`, ni `tuya_access_secret` ;
 - le jeton serveur n'est stocké que sous forme d'empreinte SHA-256 et n'est affiché qu'à sa création ;
 - une seule instance de collecte eWeLink doit fonctionner ;
 - les migrations existantes restent additives et compatibles avec une base déjà remplie.

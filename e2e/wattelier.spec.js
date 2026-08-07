@@ -5,6 +5,7 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Bienvenue dans Wattelier' })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: /Prises Omajin/ })).toBeVisible();
 
   await page.getByRole('checkbox', { name: /Compteur Linky/ }).uncheck();
   await page.getByRole('button', { name: 'Continuer' }).click();
@@ -48,6 +49,8 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   await expect(
     page.getByRole('heading', { name: 'Sécurité du serveur et application mobile' }),
   ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Prises Omajin OSP-FR-01 (Tuya)' })).toBeVisible();
+  await expect(page.getByLabel('Access ID Tuya')).toBeVisible();
 
   const themeButton = page.getByRole('button', { name: /Thème/ });
   await themeButton.click();

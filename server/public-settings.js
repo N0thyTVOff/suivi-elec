@@ -23,6 +23,11 @@ const EDITABLE_KEYS = new Set([
   'ewelink_email',
   'ewelink_password',
   'ewelink_region',
+  'omajin_enabled',
+  'tuya_access_id',
+  'tuya_access_secret',
+  'tuya_region',
+  'tuya_device_ids',
   'demo_mode',
   'raw_retention_days',
   'budget_month_eur',
@@ -38,6 +43,8 @@ const EDITABLE_KEYS = new Set([
 export function toPublicSettings(settings) {
   const token = settings.conso_token ?? '';
   const ewelinkPassword = settings.ewelink_password ?? '';
+  const tuyaAccessId = settings.tuya_access_id ?? '';
+  const tuyaAccessSecret = settings.tuya_access_secret ?? '';
   const safe = { ...settings };
   delete safe.server_token_hash;
   return {
@@ -48,6 +55,10 @@ export function toPublicSettings(settings) {
     ewelink_password_configured: Boolean(ewelinkPassword || process.env.EWELINK_PASSWORD),
     ewelink_email: '',
     ewelink_email_configured: Boolean(settings.ewelink_email || process.env.EWELINK_EMAIL),
+    tuya_access_id: '',
+    tuya_access_id_configured: Boolean(tuyaAccessId || process.env.TUYA_ACCESS_ID),
+    tuya_access_secret: '',
+    tuya_access_secret_configured: Boolean(tuyaAccessSecret || process.env.TUYA_ACCESS_SECRET),
   };
 }
 
@@ -68,6 +79,9 @@ export function editableSettings(body) {
     if (key === 'ewelink_password' && value === '' && source.clear_ewelink_password !== true)
       continue;
     if (key === 'ewelink_email' && value === '' && source.clear_ewelink_email !== true) continue;
+    if (key === 'tuya_access_id' && value === '' && source.clear_tuya_access_id !== true) continue;
+    if (key === 'tuya_access_secret' && value === '' && source.clear_tuya_access_secret !== true)
+      continue;
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
       output[key] = String(value);
     }
@@ -75,5 +89,7 @@ export function editableSettings(body) {
   if (source.clear_conso_token === true) output.conso_token = '';
   if (source.clear_ewelink_password === true) output.ewelink_password = '';
   if (source.clear_ewelink_email === true) output.ewelink_email = '';
+  if (source.clear_tuya_access_id === true) output.tuya_access_id = '';
+  if (source.clear_tuya_access_secret === true) output.tuya_access_secret = '';
   return output;
 }

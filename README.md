@@ -8,8 +8,9 @@
 [![Issues](https://img.shields.io/github/issues/N0thyTVOff/wattelier)](https://github.com/N0thyTVOff/wattelier/issues)
 
 **Votre énergie, enfin claire.** Wattelier est une application locale et auto-hébergée qui réunit
-les consommations Linky obtenues via Conso API, les prises Sonoff/eWeLink, les coûts, les analyses
-et la mensualisation. Les données restent dans une base SQLite sur votre machine.
+les consommations Linky obtenues via Conso API, les prises Sonoff/eWeLink et Omajin/Tuya, les
+coûts, les analyses et la mensualisation. Les données restent dans une base SQLite sur votre
+machine.
 
 > Wattelier ne remplace ni un dispositif de sécurité électrique ni la facture du fournisseur. Il
 > n’existe aucun service Wattelier hébergé et aucune application iOS officielle à ce jour.
@@ -28,17 +29,18 @@ Windows SmartScreen affiche alors un avertissement malgré une somme correcte. L
 emplacements de données et la migration sont dans [INSTALLATION.md](INSTALLATION.md).
 
 Au premier lancement, Wattelier peut importer l’ancien fichier `data/elec.db`. L’assistant permet
-ensuite de choisir séparément Linky et eWeLink, de configurer le contrat et de générer le jeton à
-conserver pour les autres appareils.
+ensuite de choisir séparément Linky, eWeLink et Omajin, de configurer le contrat et de générer le
+jeton à conserver pour les autres appareils.
 
 ## Fonctionnalités
 
 - vue d’ensemble Signal et thèmes clair, sombre ou automatique ;
 - consommation Linky quotidienne, courbe de charge et puissance maximale ;
 - puissance des prises Sonoff en temps réel sur le LAN, historique et commande marche/arrêt ;
+- prises Omajin OSP-FR-01 via Tuya Cloud : puissance, tension, courant et commande marche/arrêt ;
 - vues par jour, appareil et période, heatmap, veilles, pics et projections ;
 - tarifs Base, HP/HC, Tempo, EJP ou personnalisés, budget et échéancier ;
-- connecteurs Linky/eWeLink activables indépendamment et mode de démonstration ;
+- connecteurs Linky/eWeLink/Omajin activables indépendamment et mode de démonstration ;
 - export CSV, journal d’événements et API HTTP `/api/*` stable pour le futur client iOS ;
 - serveur accessible sur le réseau local, protégé par un jeton ;
 - application Windows avec zone de notification et collecte en arrière-plan.
@@ -63,15 +65,23 @@ Ouvrez ensuite <http://localhost:3017>. Copiez `.env.example` vers `.env` unique
 besoin d’une configuration automatisée : les connecteurs peuvent être configurés depuis
 l’interface.
 
-| Variable           | Obligatoire       | Description                     |
-| ------------------ | ----------------- | ------------------------------- |
-| `EWELINK_EMAIL`    | Sonoff uniquement | Compte eWeLink dédié recommandé |
-| `EWELINK_PASSWORD` | Sonoff uniquement | Mot de passe eWeLink            |
-| `EWELINK_REGION`   | Non               | Région eWeLink, `eu` par défaut |
-| `PORT`             | Non               | Port HTTP, `3017` par défaut    |
-| `HOST`             | Non               | Adresse d’écoute, `0.0.0.0`     |
-| `TRUST_PROXY`      | Non               | `1` derrière un reverse proxy   |
-| `DATA_DIR`         | Non               | Stockage persistant, `./data`   |
+| Variable             | Obligatoire       | Description                                     |
+| -------------------- | ----------------- | ----------------------------------------------- |
+| `EWELINK_EMAIL`      | Sonoff uniquement | Compte eWeLink dédié recommandé                 |
+| `EWELINK_PASSWORD`   | Sonoff uniquement | Mot de passe eWeLink                            |
+| `EWELINK_REGION`     | Non               | Région eWeLink, `eu` par défaut                 |
+| `TUYA_ACCESS_ID`     | Omajin uniquement | Access ID du projet Cloud Tuya                  |
+| `TUYA_ACCESS_SECRET` | Omajin uniquement | Access Secret du projet Cloud Tuya              |
+| `TUYA_REGION`        | Non               | Centre Tuya, `eu` pour un compte français       |
+| `TUYA_DEVICE_IDS`    | Omajin uniquement | IDs séparés par virgule, optionnellement nommés |
+| `PORT`               | Non               | Port HTTP, `3017` par défaut                    |
+| `HOST`               | Non               | Adresse d’écoute, `0.0.0.0`                     |
+| `TRUST_PROXY`        | Non               | `1` derrière un reverse proxy                   |
+| `DATA_DIR`           | Non               | Stockage persistant, `./data`                   |
+
+La procédure d’association de l’OSP-FR-01 est détaillée dans
+[docs/OMAJIN.md](docs/OMAJIN.md). Le numéro de série imprimé sur la prise n’est pas l’identifiant
+Tuya demandé par Wattelier.
 
 `.env`, les bases, journaux et archives sont ignorés par Git. Ne partagez jamais `elec.db` : ce
 fichier peut contenir des identifiants et l’historique énergétique du logement.

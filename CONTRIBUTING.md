@@ -5,9 +5,9 @@ gouvernance actuelle prévoit que le mainteneur `@N0thyTVOff` réalise et fusion
 externe depuis un fork reste possible techniquement, mais n'accorde ni accès en écriture, ni accès
 aux secrets, et ses workflows nécessitent l'approbation du mainteneur.
 
-N'incluez jamais de jeton Linky, PRM réel, identifiant eWeLink, clé Sonoff, base SQLite, journal ou
-capture contenant des données personnelles. Les vulnérabilités doivent être signalées en privé
-selon [SECURITY.md](SECURITY.md).
+N'incluez jamais de jeton Linky, PRM réel, identifiant eWeLink, clé Sonoff, Access ID/Secret Tuya,
+Device ID réel, base SQLite, journal ou capture contenant des données personnelles. Les
+vulnérabilités doivent être signalées en privé selon [SECURITY.md](SECURITY.md).
 
 ## Cycle d'une modification
 

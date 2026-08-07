@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.1.1...wattelier-v2.1.2) (2026-08-07)
+
+
+### Corrections
+
+* **omajin:** accélère les mesures temps réel ([#24](https://github.com/N0thyTVOff/wattelier/issues/24)) ([74ff7f9](https://github.com/N0thyTVOff/wattelier/commit/74ff7f9e01d57d065a64d30c7f6bebae4231ea5e))
+
 ## [2.1.1](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.1.0...wattelier-v2.1.1) (2026-08-07)
 
 

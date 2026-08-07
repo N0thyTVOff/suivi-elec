@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.2.0...wattelier-v2.3.0) (2026-08-07)
+
+
+### Fonctionnalités
+
+* **desktop:** ajoute la connexion distante sécurisée ([#30](https://github.com/N0thyTVOff/wattelier/issues/30)) ([4abb7fd](https://github.com/N0thyTVOff/wattelier/commit/4abb7fd72faa25f06cab03a8b126315d859757b3)), closes [#27](https://github.com/N0thyTVOff/wattelier/issues/27)
+
 ## [2.2.0](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.1.2...wattelier-v2.2.0) (2026-08-07)
 
 

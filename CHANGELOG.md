@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.0.0...wattelier-v2.1.0) (2026-08-07)
+
+
+### Fonctionnalités
+
+* **omajin:** intègre les prises Tuya ([#20](https://github.com/N0thyTVOff/wattelier/issues/20)) ([a5f638b](https://github.com/N0thyTVOff/wattelier/commit/a5f638bed237fb1e3f5c88b0f17f87fcd7a7f251))
+
 ## [2.0.0](https://github.com/N0thyTVOff/wattelier/compare/suivi-elec-v1.0.0...wattelier-v2.0.0) (2026-08-07)
 
 

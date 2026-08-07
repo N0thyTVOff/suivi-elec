@@ -12,7 +12,11 @@ import {
   isTrustedDesktopUrl,
   requestSingleInstance,
 } from '../desktop/policy.js';
-import { loginItemOptions, resolveRuntimePaths } from '../desktop/runtime-paths.js';
+import {
+  loginItemOptions,
+  resolveDesktopAssetPath,
+  resolveRuntimePaths,
+} from '../desktop/runtime-paths.js';
 
 const execFileAsync = promisify(execFile);
 const childEnvironment = { ...process.env };
@@ -47,6 +51,37 @@ test('le démarrage Windows utilise le lancement caché', () => {
     path: 'C:\\Program Files\\Wattelier\\Wattelier.exe',
     args: ['--hidden'],
   });
+});
+
+test('les icônes Electron utilisent les ressources externes dans le paquet', () => {
+  assert.equal(
+    resolveDesktopAssetPath({
+      packaged: true,
+      resourcesDirectory: path.join('C:', 'Program Files', 'Wattelier', 'resources'),
+      applicationDirectory: path.join('C:', 'sources', 'wattelier'),
+      filename: 'tray.ico',
+    }),
+    path.resolve(path.join('C:', 'Program Files', 'Wattelier', 'resources', 'tray.ico')),
+  );
+  assert.equal(
+    resolveDesktopAssetPath({
+      packaged: false,
+      resourcesDirectory: path.join('C:', 'unused'),
+      applicationDirectory: path.join('C:', 'sources', 'wattelier'),
+      filename: 'icon.png',
+    }),
+    path.resolve(path.join('C:', 'sources', 'wattelier', 'build', 'icon.png')),
+  );
+  assert.throws(
+    () =>
+      resolveDesktopAssetPath({
+        packaged: true,
+        resourcesDirectory: '.',
+        applicationDirectory: '.',
+        filename: '../secret.txt',
+      }),
+    /non autorisée/,
+  );
 });
 
 test('la politique Electron limite l’instance, l’origine IPC et les informations exposées', () => {
@@ -101,6 +136,8 @@ test('le smoke test Windows reste analysable et attend la libération des exécu
     'PowerShell interprète les apostrophes typographiques comme des délimiteurs de chaîne',
   );
   assert.match(smokeScript, /WaitForExit\(5000\)/);
+  assert.match(smokeScript, /Confirm-WattelierStaysRunning/);
+  assert.match(smokeScript, /Start-Sleep -Seconds 2/);
   assert.match(smokeScript, /for \(\$attempt = 1; \$attempt -le 10; \$attempt\+\+\)/);
 });
 

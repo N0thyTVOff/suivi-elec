@@ -11,6 +11,7 @@ const expectedArtifacts = [
 ];
 const allowedDirectories = ['/desktop', '/server', '/dist', '/node_modules'];
 const allowedFiles = ['/package.json', '/LICENSE', '/NOTICE'];
+const expectedResources = ['tray.ico', 'icon.png'];
 const forbiddenPatterns = [
   /(^|\/)\.env(?:\.|$)/i,
   /^\/data\//i,
@@ -47,6 +48,14 @@ if (fs.existsSync(asarPath)) {
     if (forbiddenPatterns.some((pattern) => pattern.test(file))) {
       errors.push(`fichier sensible ou inutile dans app.asar : ${file}`);
     }
+  }
+}
+
+const resourcesDirectory = path.dirname(asarPath);
+for (const resource of expectedResources) {
+  const target = path.join(resourcesDirectory, resource);
+  if (!fs.existsSync(target) || fs.statSync(target).size === 0) {
+    errors.push(`ressource Electron absente ou vide : ${resource}`);
   }
 }
 

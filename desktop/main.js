@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell, Tray } from 'electron';
 import { importLegacyDatabase } from './legacy-import.js';
 import { desktopRuntimeInfo, isTrustedDesktopUrl, requestSingleInstance } from './policy.js';
-import { loginItemOptions, resolveRuntimePaths } from './runtime-paths.js';
+import { loginItemOptions, resolveDesktopAssetPath, resolveRuntimePaths } from './runtime-paths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3017;
@@ -19,6 +19,15 @@ let stopServer;
 let quitting = false;
 let serverReady = false;
 let runtimePaths;
+
+function desktopAsset(filename) {
+  return resolveDesktopAssetPath({
+    packaged: app.isPackaged,
+    resourcesDirectory: process.resourcesPath,
+    applicationDirectory: path.join(__dirname, '..'),
+    filename,
+  });
+}
 
 if (!hasInstanceLock) app.quit();
 
@@ -104,7 +113,7 @@ function createWindow() {
     minHeight: 620,
     show: false,
     backgroundColor: '#090f1f',
-    icon: path.join(__dirname, '..', 'build', 'icon.png'),
+    icon: desktopAsset('icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -134,7 +143,7 @@ function createWindow() {
 }
 
 function createTray() {
-  tray = new Tray(path.join(__dirname, '..', 'build', 'tray.ico'));
+  tray = new Tray(desktopAsset('tray.ico'));
   tray.setToolTip('Wattelier — serveur énergétique actif');
   tray.setContextMenu(
     Menu.buildFromTemplate([

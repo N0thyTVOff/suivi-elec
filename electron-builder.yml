@@ -10,6 +10,11 @@ files:
   - package.json
   - LICENSE
   - NOTICE
+extraResources:
+  - from: build/tray.ico
+    to: tray.ico
+  - from: build/icon.png
+    to: icon.png
 directories:
   buildResources: build
   output: release

@@ -62,6 +62,12 @@ function Wait-WattelierEndpoint([int]$Port) {
   throw "Wattelier n'a pas répondu sur le port $Port."
 }
 
+function Confirm-WattelierStaysRunning([int]$Port) {
+  Wait-WattelierEndpoint $Port
+  Start-Sleep -Seconds 2
+  Wait-WattelierEndpoint $Port
+}
+
 function Stop-WattelierOnPort([int]$Port) {
   $connection = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
     Select-Object -First 1
@@ -106,7 +112,7 @@ try {
   $env:WATTELIER_SKIP_LEGACY_IMPORT = '1'
   $env:PORT = [string]$installedPort
   $installedProcess = Start-Process -FilePath $installedExecutable -ArgumentList '--hidden', "--user-data-dir=$testUserData" -PassThru
-  Wait-WattelierEndpoint $installedPort
+  Confirm-WattelierStaysRunning $installedPort
   $installedDatabase = Get-ChildItem -LiteralPath $testUserData -Filter 'elec.db' -File -Recurse |
     Select-Object -First 1
   if (-not $installedDatabase -or $installedDatabase.Directory.Name -ne 'app-data') {
@@ -141,7 +147,7 @@ try {
   Copy-Item -LiteralPath $portableSource -Destination $portablePath
   $env:PORT = [string]$portablePort
   $portableProcess = Start-Process -FilePath $portablePath -ArgumentList '--hidden' -PassThru
-  Wait-WattelierEndpoint $portablePort
+  Confirm-WattelierStaysRunning $portablePort
   if (-not (Test-Path -LiteralPath (Join-Path $portableDirectory 'Wattelier-data\elec.db'))) {
     throw "La version portable n'a pas créé Wattelier-data à côté de l'exécutable."
   }

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.1.2...wattelier-v2.2.0) (2026-08-07)
+
+
+### Fonctionnalités
+
+* **desktop:** ajoute les mises à jour automatiques ([#28](https://github.com/N0thyTVOff/wattelier/issues/28)) ([a8ccf34](https://github.com/N0thyTVOff/wattelier/commit/a8ccf341e090eb39ab65eb3aa9e1d596add7b26c)), closes [#26](https://github.com/N0thyTVOff/wattelier/issues/26)
+
 ## [2.1.2](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.1.1...wattelier-v2.1.2) (2026-08-07)
 
 

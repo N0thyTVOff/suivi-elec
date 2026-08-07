@@ -90,7 +90,7 @@ test('le preload n’expose que les deux méthodes autorisées', () => {
   assert.doesNotMatch(preload, /require\(['"](?:node:)?(?:fs|child_process)/);
 });
 
-test('le smoke test Windows reste analysable par PowerShell 7', () => {
+test('le smoke test Windows reste analysable et attend la libération des exécutables', () => {
   const smokeScript = fs.readFileSync(
     new URL('../scripts/smoke-windows-package.ps1', import.meta.url),
     'utf8',
@@ -100,6 +100,8 @@ test('le smoke test Windows reste analysable par PowerShell 7', () => {
     /[‘’]/,
     'PowerShell interprète les apostrophes typographiques comme des délimiteurs de chaîne',
   );
+  assert.match(smokeScript, /WaitForExit\(5000\)/);
+  assert.match(smokeScript, /for \(\$attempt = 1; \$attempt -le 10; \$attempt\+\+\)/);
 });
 
 test('importe une ancienne base elec.db sans modifier la source', async (t) => {

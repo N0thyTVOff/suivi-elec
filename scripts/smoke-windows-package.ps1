@@ -23,6 +23,8 @@ $portablePort = Get-Random -Minimum 48000 -Maximum 50999
 $originalAppData = $env:APPDATA
 $originalPort = $env:PORT
 $originalSkipImport = $env:WATTELIER_SKIP_LEGACY_IMPORT
+$installedProcess = $null
+$portableProcess = $null
 
 if (-not $resolvedSmokeRoot.StartsWith($resolvedTempRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
     ([System.IO.Path]::GetFileName($resolvedSmokeRoot) -notlike 'wattelier-package-smoke-*')) {
@@ -64,7 +66,28 @@ function Stop-WattelierOnPort([int]$Port) {
   $connection = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
     Select-Object -First 1
   if ($connection) {
-    Stop-Process -Id $connection.OwningProcess -ErrorAction SilentlyContinue
+    Stop-Process -Id $connection.OwningProcess -Force -ErrorAction SilentlyContinue
+  }
+}
+
+function Stop-TestProcess($Process) {
+  if ($null -eq $Process) { return }
+  $Process.Refresh()
+  if (-not $Process.HasExited) {
+    Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue
+    [void]$Process.WaitForExit(5000)
+  }
+}
+
+function Remove-SmokeDirectory {
+  for ($attempt = 1; $attempt -le 10; $attempt++) {
+    try {
+      Remove-Item -LiteralPath $resolvedSmokeRoot -Recurse -Force -ErrorAction Stop
+      return
+    } catch {
+      if ($attempt -eq 10) { throw }
+      Start-Sleep -Milliseconds 500
+    }
   }
 }
 
@@ -82,7 +105,7 @@ try {
   $env:APPDATA = $testAppData
   $env:WATTELIER_SKIP_LEGACY_IMPORT = '1'
   $env:PORT = [string]$installedPort
-  Start-Process -FilePath $installedExecutable -ArgumentList '--hidden', "--user-data-dir=$testUserData" | Out-Null
+  $installedProcess = Start-Process -FilePath $installedExecutable -ArgumentList '--hidden', "--user-data-dir=$testUserData" -PassThru
   Wait-WattelierEndpoint $installedPort
   $installedDatabase = Get-ChildItem -LiteralPath $testUserData -Filter 'elec.db' -File -Recurse |
     Select-Object -First 1
@@ -102,6 +125,7 @@ try {
   }
 
   Stop-WattelierOnPort $installedPort
+  Stop-TestProcess $installedProcess
   $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
   if ($uninstall.ExitCode -ne 0) { throw "La désinstallation silencieuse a échoué ($($uninstall.ExitCode))." }
   if (Test-Path -LiteralPath $installedExecutable) { throw 'Le programme installé existe encore.' }
@@ -116,7 +140,7 @@ try {
 
   Copy-Item -LiteralPath $portableSource -Destination $portablePath
   $env:PORT = [string]$portablePort
-  Start-Process -FilePath $portablePath -ArgumentList '--hidden' | Out-Null
+  $portableProcess = Start-Process -FilePath $portablePath -ArgumentList '--hidden' -PassThru
   Wait-WattelierEndpoint $portablePort
   if (-not (Test-Path -LiteralPath (Join-Path $portableDirectory 'Wattelier-data\elec.db'))) {
     throw "La version portable n'a pas créé Wattelier-data à côté de l'exécutable."
@@ -125,11 +149,14 @@ try {
     throw 'La version portable a créé un démarrage automatique.'
   }
   Stop-WattelierOnPort $portablePort
+  Stop-TestProcess $portableProcess
 
   Write-Host 'Smoke test Windows validé : installation, raccourcis, instance unique, démarrage caché, désinstallation avec conservation des données et portable.'
 } finally {
   Stop-WattelierOnPort $installedPort
   Stop-WattelierOnPort $portablePort
+  Stop-TestProcess $installedProcess
+  Stop-TestProcess $portableProcess
   $env:APPDATA = $originalAppData
   $env:PORT = $originalPort
   $env:WATTELIER_SKIP_LEGACY_IMPORT = $originalSkipImport
@@ -140,6 +167,6 @@ try {
   Remove-Item -LiteralPath $startMenuShortcut -ErrorAction SilentlyContinue
   Remove-ItemProperty -LiteralPath $runKey -Name Wattelier -ErrorAction SilentlyContinue
   if (Test-Path -LiteralPath $resolvedSmokeRoot) {
-    Remove-Item -LiteralPath $resolvedSmokeRoot -Recurse -Force
+    Remove-SmokeDirectory
   }
 }

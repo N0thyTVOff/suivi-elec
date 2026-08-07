@@ -87,7 +87,7 @@ try {
   $installedDatabase = Get-ChildItem -LiteralPath $testUserData -Filter 'elec.db' -File -Recurse |
     Select-Object -First 1
   if (-not $installedDatabase -or $installedDatabase.Directory.Name -ne 'app-data') {
-    throw 'La version installée n’a pas créé sa base dans le profil Windows de test.'
+    throw "La version installée n'a pas créé sa base dans le profil Windows de test."
   }
 
   $runValue = (Get-ItemProperty -LiteralPath $runKey -Name Wattelier).Wattelier
@@ -98,7 +98,7 @@ try {
   $second = Start-Process -FilePath $installedExecutable -ArgumentList '--hidden', "--user-data-dir=$testUserData" -PassThru
   if (-not $second.WaitForExit(5000)) {
     Stop-Process -Id $second.Id -ErrorAction SilentlyContinue
-    throw 'La seconde instance ne s’est pas arrêtée.'
+    throw "La seconde instance ne s'est pas arrêtée."
   }
 
   Stop-WattelierOnPort $installedPort
@@ -119,7 +119,7 @@ try {
   Start-Process -FilePath $portablePath -ArgumentList '--hidden' | Out-Null
   Wait-WattelierEndpoint $portablePort
   if (-not (Test-Path -LiteralPath (Join-Path $portableDirectory 'Wattelier-data\elec.db'))) {
-    throw 'La version portable n’a pas créé Wattelier-data à côté de l’exécutable.'
+    throw "La version portable n'a pas créé Wattelier-data à côté de l'exécutable."
   }
   if ((Get-ItemProperty -LiteralPath $runKey -Name Wattelier -ErrorAction SilentlyContinue).Wattelier) {
     throw 'La version portable a créé un démarrage automatique.'

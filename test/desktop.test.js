@@ -90,6 +90,18 @@ test('le preload n’expose que les deux méthodes autorisées', () => {
   assert.doesNotMatch(preload, /require\(['"](?:node:)?(?:fs|child_process)/);
 });
 
+test('le smoke test Windows reste analysable par PowerShell 7', () => {
+  const smokeScript = fs.readFileSync(
+    new URL('../scripts/smoke-windows-package.ps1', import.meta.url),
+    'utf8',
+  );
+  assert.doesNotMatch(
+    smokeScript,
+    /[‘’]/,
+    'PowerShell interprète les apostrophes typographiques comme des délimiteurs de chaîne',
+  );
+});
+
 test('importe une ancienne base elec.db sans modifier la source', async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'wattelier-import-test-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));

@@ -14,6 +14,13 @@ const expectedArtifacts = [
 const allowedDirectories = ['/desktop', '/server', '/dist', '/node_modules'];
 const allowedFiles = ['/package.json', '/LICENSE', '/NOTICE'];
 const expectedResources = ['tray.ico', 'icon.png', 'app-update.yml'];
+const expectedPackagedFiles = [
+  '/desktop/connect.html',
+  '/desktop/connect-preload.cjs',
+  '/desktop/connection-store.js',
+  '/desktop/tailscale.js',
+  '/server/connection-token.js',
+];
 const forbiddenPatterns = [
   /(^|\/)\.env(?:\.|$)/i,
   /^\/data\//i,
@@ -38,6 +45,10 @@ for (const artifact of expectedArtifacts) {
 
 if (fs.existsSync(asarPath)) {
   const packagedFiles = listPackage(asarPath).map((entry) => entry.replaceAll('\\', '/'));
+  for (const expected of expectedPackagedFiles) {
+    if (!packagedFiles.includes(expected))
+      errors.push(`fichier requis absent de app.asar : ${expected}`);
+  }
   for (const file of packagedFiles) {
     if (
       !allowedFiles.includes(file) &&

@@ -7,6 +7,9 @@ export default function Settings({ status }) {
   const [saving, setSaving] = useState(false);
   const [newServerToken, setNewServerToken] = useState('');
   const [desktopInfo, setDesktopInfo] = useState(null);
+  const [tailscale, setTailscale] = useState(null);
+  const [tailscaleBusy, setTailscaleBusy] = useState(false);
+  const [tailscaleError, setTailscaleError] = useState('');
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('');
 
@@ -16,11 +19,21 @@ export default function Settings({ status }) {
       .catch(() => {});
     window.wattelierDesktop
       ?.getRuntimeInfo()
-      .then(setDesktopInfo)
+      .then((info) => {
+        setDesktopInfo(info);
+        if (info.applicationMode === 'server') {
+          window.wattelierDesktop
+            ?.getTailscaleStatus?.()
+            .then(setTailscale)
+            .catch(() => {});
+        }
+      })
       .catch(() => {});
   }, []);
 
   if (!settings) return <div className="empty">Chargement…</div>;
+  const tailscaleEnabled =
+    tailscale?.connected && settings.public_server_url === tailscale.serverUrl;
 
   const set = (key) => (e) => setSettings((s) => ({ ...s, [key]: e.target.value }));
 
@@ -55,8 +68,25 @@ export default function Settings({ status }) {
   };
 
   const rotateServerToken = async () => {
+    await post('settings', { public_server_url: settings.public_server_url });
     const result = await post('auth/rotate', {});
-    setNewServerToken(result.accessToken);
+    setNewServerToken(result.connectionToken || result.accessToken);
+  };
+
+  const enableTailscale = async () => {
+    setTailscaleBusy(true);
+    setTailscaleError('');
+    try {
+      const result = await window.wattelierDesktop.enableTailscale();
+      const next = await post('settings', { public_server_url: result.serverUrl });
+      setSettings(next);
+      setTailscale(result);
+      setNewServerToken('');
+    } catch (error) {
+      setTailscaleError(error.message || 'Configuration Tailscale impossible.');
+    } finally {
+      setTailscaleBusy(false);
+    }
   };
 
   const toggleOpenAtLogin = async () => {
@@ -645,9 +675,58 @@ export default function Settings({ status }) {
       <div className="panel">
         <h2>Sécurité du serveur et application mobile</h2>
         <p className="note">
-          Le même jeton fonctionne avec le dashboard web et la future application mobile. Dans
-          l’app, il suffira d’enregistrer une fois l’adresse HTTPS du serveur et ce jeton.
+          Le jeton de connexion contient l’adresse HTTPS et le secret nécessaires. Dans
+          l’application Windows ou la future app mobile, vous ne collerez donc qu’une seule valeur.
         </p>
+        <div className="settings" style={{ marginTop: 14 }}>
+          <label style={{ gridColumn: '1 / -1' }}>
+            Adresse HTTPS du serveur
+            <input
+              type="url"
+              value={settings.public_server_url || ''}
+              onChange={set('public_server_url')}
+              placeholder="https://mon-pc.mon-tailnet.ts.net"
+            />
+            <small>
+              Facultatif pour un usage local. Obligatoire pour créer un jeton utilisable à distance.
+            </small>
+          </label>
+        </div>
+        {desktopInfo?.applicationMode === 'server' && tailscale && (
+          <div className="subpanel" style={{ marginTop: 14 }}>
+            <b>Tailscale · accès distant privé (facultatif)</b>
+            <p className="note" style={{ margin: '6px 0 12px' }}>
+              {tailscale.connected
+                ? tailscaleEnabled
+                  ? `Serveur publié sur ${tailscale.serverUrl}`
+                  : `PC connecté à Tailscale (${tailscale.dnsName}).`
+                : tailscale.installed
+                  ? 'Tailscale est installé, mais ce PC doit être connecté à votre réseau Tailscale.'
+                  : 'Tailscale n’est pas installé sur ce PC.'}
+            </p>
+            {tailscale.connected && !tailscaleEnabled && (
+              <button
+                className="btn secondary"
+                type="button"
+                onClick={enableTailscale}
+                disabled={tailscaleBusy}
+              >
+                {tailscaleBusy ? 'Configuration…' : 'Configurer automatiquement Tailscale'}
+              </button>
+            )}
+            {!tailscale.installed && (
+              <a
+                className="btn secondary"
+                href="https://tailscale.com/download/windows"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Installer Tailscale
+              </a>
+            )}
+            {tailscaleError && <p className="form-error">{tailscaleError}</p>}
+          </div>
+        )}
         {status?.server?.authEnabled === false && (
           <p className="warning-note">
             Cette installation existait avant l’ajout de l’authentification. Générez un jeton
@@ -655,7 +734,7 @@ export default function Settings({ status }) {
           </p>
         )}
         <button className="btn" type="button" onClick={rotateServerToken}>
-          Générer ou renouveler le jeton d’accès
+          Générer ou renouveler le jeton de connexion
         </button>
         {newServerToken && (
           <div className="token-box" style={{ marginTop: 14 }}>
@@ -670,8 +749,8 @@ export default function Settings({ status }) {
         )}
         {newServerToken && (
           <p className="warning-note">
-            Copiez-le maintenant : l’ancien jeton est révoqué et cette valeur ne sera plus affichée
-            après avoir quitté la page.
+            Copiez-le maintenant : l’ancien jeton est révoqué et cette valeur sensible ne sera plus
+            affichée après avoir quitté la page.
           </p>
         )}
       </div>
@@ -679,8 +758,8 @@ export default function Settings({ status }) {
       <div className="panel">
         <h2>Accès depuis un autre appareil</h2>
         <p className="note">
-          Le dashboard est accessible depuis un téléphone ou une tablette connectés au{' '}
-          <b>même réseau</b> que ce PC :
+          Sans Tailscale, le dashboard est accessible depuis un téléphone ou une tablette connectés
+          au <b>même réseau</b> que ce PC :
         </p>
         <div className="row" style={{ marginTop: 6 }}>
           {(status?.urls || []).map((u) => (
@@ -703,9 +782,9 @@ export default function Settings({ status }) {
         </div>
         <p className="note" style={{ marginTop: 8 }}>
           Le PC doit rester allumé ; l’application Windows continue la collecte dans la zone de
-          notification lorsque sa fenêtre est fermée. Pour un accès distant, utilisez un nom de
-          domaine HTTPS, un reverse proxy ou un VPN comme Tailscale. Ne redirigez pas directement ce
-          port HTTP sur Internet.
+          notification lorsque sa fenêtre est fermée. Tailscale est l’option guidée pour l’accès
+          distant privé : chaque appareil doit être connecté au même réseau Tailscale. Ne redirigez
+          jamais directement ce port HTTP sur Internet.
         </p>
       </div>
 

@@ -12,6 +12,7 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
         portable: false,
         openAtLogin: true,
         automaticUpdates,
+        applicationMode: 'server',
       }),
       setOpenAtLogin: async (enabled) => ({ openAtLogin: enabled, portable: false }),
       setAutomaticUpdates: async (enabled) => {
@@ -19,6 +20,19 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
         return { automaticUpdates, phase: 'idle' };
       },
       checkForUpdates: async () => ({ phase: 'up-to-date', message: 'Wattelier est à jour.' }),
+      getTailscaleStatus: async () => ({
+        installed: true,
+        connected: true,
+        dnsName: 'pc.maison.ts.net',
+        serverUrl: 'https://pc.maison.ts.net',
+      }),
+      enableTailscale: async () => ({
+        installed: true,
+        connected: true,
+        enabled: true,
+        dnsName: 'pc.maison.ts.net',
+        serverUrl: 'https://pc.maison.ts.net',
+      }),
     };
   });
   await page.goto('/');
@@ -67,6 +81,9 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   await expect(
     page.getByRole('heading', { name: 'Sécurité du serveur et application mobile' }),
   ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Configurer automatiquement Tailscale' }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Prises Omajin OSP-FR-01 (Tuya)' })).toBeVisible();
   await expect(page.getByLabel('Access ID Tuya')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Application Windows' })).toBeVisible();
@@ -86,7 +103,7 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   await context.clearCookies();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Connexion sécurisée' })).toBeVisible();
-  await page.getByLabel(/Jeton d’accès/).fill(token);
+  await page.getByLabel(/Jeton d’accès ou de connexion/).fill(token);
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByRole('heading', { name: "Vue d'ensemble" })).toBeVisible();
 });

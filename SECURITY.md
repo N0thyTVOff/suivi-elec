@@ -16,9 +16,12 @@ Wattelier est une application auto-hébergée sans comptes multi-utilisateurs. L
 installations protègent toute l'API avec un jeton aléatoire ; seule son empreinte est stockée. Une
 installation mise à niveau doit activer cette protection depuis Réglages avant tout accès distant.
 
-Le jeton assure l'authentification, pas le chiffrement. L'application doit rester derrière un
-pare-feu et ne doit pas être publiée directement en HTTP sur Internet : utilisez un VPN ou un
-reverse proxy HTTPS. La base
+Le jeton assure l'authentification, pas le chiffrement. Le jeton de connexion `wtl1_…` contient à la
+fois l'origine HTTPS et le secret Bearer : il est donc aussi sensible qu'un mot de passe. Dans
+l'application Windows distante, cette configuration est chiffrée avec `safeStorage` (DPAPI sous
+Windows), et la fenêtre distante n'expose aucun pont Electron. L'application doit rester derrière
+un pare-feu et ne doit pas être publiée directement en HTTP sur Internet : utilisez Tailscale Serve
+dans un tailnet privé ou un reverse proxy HTTPS. La base
 `data/elec.db` et `.env` sont sensibles : ils peuvent contenir identifiants eWeLink, jeton et PRM
 Linky, clés Sonoff, Access ID/Secret Tuya, identifiants d’appareils, habitudes de consommation et
 noms d'appareils.

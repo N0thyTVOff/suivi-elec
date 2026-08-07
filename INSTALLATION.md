@@ -32,6 +32,18 @@ copies de Wattelier avec les mêmes appareils : l’application bloque une secon
 La version portable signale les nouvelles releases, mais son remplacement reste manuel afin que le
 dossier `Wattelier-data` demeure sous votre contrôle.
 
+## Choisir le rôle de cette application
+
+Au premier lancement, **les deux éditions** (installateur et portable) proposent le même choix :
+
+1. **Créer mon serveur** : ce PC héberge la base, collecte Linky et les prises, puis affiche
+   l'onboarding de configuration ;
+2. **Accéder à mon serveur distant** : Wattelier demande uniquement le jeton de connexion `wtl1_…`
+   généré sur le PC serveur. Aucune base ni collecte locale n'est démarrée.
+
+La connexion distante est enregistrée avec le chiffrement Windows. Le client n'accepte qu'une
+adresse HTTPS encodée dans le jeton et ne charge aucune autre origine.
+
 ## Vérifier le téléchargement
 
 Téléchargez aussi `SHA256SUMS.txt`, puis utilisez PowerShell :
@@ -57,8 +69,10 @@ Lorsqu’aucune base n’existe, Wattelier propose avant le démarrage du serveu
 L’import vérifie l’intégrité SQLite et copie la base dans le nouvel emplacement sans modifier la
 source. Conservez tout de même une sauvegarde de l’ancien dossier.
 
-L’onboarding demande ensuite les connecteurs, le contrat et le tarif. Le jeton d’accès affiché à la
-fin ne l’est qu’une fois : conservez-le dans un gestionnaire de mots de passe.
+L’onboarding demande ensuite les connecteurs, le contrat et le tarif. Si un accès HTTPS distant est
+configuré, le jeton de connexion affiché à la fin contient déjà l'adresse du serveur : une seule
+valeur est à saisir dans un autre Wattelier ou dans la future app mobile. Il n'est affiché qu'une
+fois : conservez-le dans un gestionnaire de mots de passe.
 
 ## Réseau local et accès distant
 
@@ -66,11 +80,24 @@ Wattelier écoute sur `0.0.0.0:3017`. Si Windows le demande, autorisez Wattelier
 uniquement sur le profil **Privé**. Les adresses utilisables par un autre appareil sont affichées
 dans **Réglages → Accès depuis un autre appareil**.
 
-Le jeton protège l’API, mais HTTP ne chiffre pas le trafic. Pour un accès depuis Internet, utilisez
-un VPN comme Tailscale ou WireGuard, ou un reverse proxy HTTPS avec un certificat valide. Ne
-redirigez jamais directement le port `3017` de votre box vers Wattelier.
+Le jeton protège l’API, mais HTTP ne chiffre pas le trafic. Ne redirigez jamais directement le port
+`3017` de votre box vers Wattelier.
 
-Les clients natifs envoient `Authorization: Bearer <jeton>` à chaque appel `/api/*`. Le dashboard
+### Option recommandée : Tailscale
+
+1. Installez Tailscale sur le PC serveur et sur chaque appareil distant, puis connectez-les au même
+   tailnet ;
+2. dans l'onboarding ou **Réglages → Sécurité du serveur**, cliquez sur **Configurer
+   automatiquement Tailscale** ;
+3. générez le jeton de connexion et collez cette valeur unique dans l'édition distante.
+
+Wattelier lance `tailscale serve --bg http://127.0.0.1:3017`. Tailscale Serve fournit une adresse
+HTTPS privée, accessible uniquement aux appareils autorisés du tailnet. Tailscale reste facultatif :
+un reverse proxy HTTPS correctement configuré peut fournir l'adresse publique à enregistrer dans
+les réglages.
+
+Les clients natifs extraient le secret du jeton de connexion puis envoient
+`Authorization: Bearer <secret>` à chaque appel `/api/*`. Le dashboard
 web échange le jeton contre un cookie `HttpOnly`. Un renouvellement depuis Réglages révoque
 immédiatement l’ancienne valeur.
 

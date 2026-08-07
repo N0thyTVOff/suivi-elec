@@ -39,6 +39,7 @@ test('résout les chemins installé et portable sans mélanger les données', ()
   assert.equal(path.basename(installed.dataDirectory), 'app-data');
   assert.equal(path.basename(installed.databasePath), 'elec.db');
   assert.equal(path.basename(installed.preferencesPath), 'desktop-preferences.json');
+  assert.equal(path.basename(installed.connectionPath), 'desktop-connection.bin');
 
   const portable = resolveRuntimePaths({
     portableDirectory: path.join('D:', 'Apps', 'Wattelier'),
@@ -115,6 +116,7 @@ test('la politique Electron limite l’instance, l’origine IPC et les informat
     portable: false,
     openAtLogin: true,
     automaticUpdates: false,
+    applicationMode: 'server',
   });
   assert.deepEqual(
     desktopRuntimeInfo({
@@ -129,6 +131,7 @@ test('la politique Electron limite l’instance, l’origine IPC et les informat
       portable: true,
       openAtLogin: false,
       automaticUpdates: false,
+      applicationMode: 'server',
     },
   );
 });
@@ -141,11 +144,15 @@ test('le preload n’expose que les méthodes de bureau autorisées', () => {
     'setOpenAtLogin',
     'setAutomaticUpdates',
     'checkForUpdates',
+    'getTailscaleStatus',
+    'enableTailscale',
   ]);
   assert.match(preload, /wattelier:get-runtime-info/);
   assert.match(preload, /wattelier:set-open-at-login/);
   assert.match(preload, /wattelier:set-automatic-updates/);
   assert.match(preload, /wattelier:check-for-updates/);
+  assert.match(preload, /wattelier:tailscale-status/);
+  assert.match(preload, /wattelier:tailscale-enable/);
   assert.doesNotMatch(preload, /require\(['"](?:node:)?(?:fs|child_process)/);
 });
 
@@ -170,22 +177,49 @@ test('le bureau relie la détection de mise à jour à une source GitHub sûre',
   assert.match(releaseWorkflow, /\.exe\.blockmap/);
 });
 
+test('le bureau sépare le serveur local du client HTTPS distant', () => {
+  const main = fs.readFileSync(new URL('../desktop/main.js', import.meta.url), 'utf8');
+  const connectionPage = fs.readFileSync(
+    new URL('../desktop/connect.html', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(main, /Créer mon serveur/);
+  assert.match(main, /Accéder à mon serveur distant/);
+  assert.match(main, /applicationMode === 'server'/);
+  assert.match(main, /remote \? \{\} : \{ preload:/);
+  assert.match(main, /protocol === 'https:'/);
+  assert.match(main, /setPermissionRequestHandler/);
+  assert.match(main, /Changer de serveur distant/);
+  assert.match(main, /clearDesktopConnection/);
+  assert.match(connectionPage, /jeton de connexion/i);
+  assert.match(connectionPage, /Content-Security-Policy/);
+});
+
 test('les préférences de mise à jour sont locales, validées et écrites atomiquement', (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'wattelier-preferences-test-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const filename = path.join(directory, 'nested', 'desktop-preferences.json');
 
-  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: false });
-  assert.deepEqual(writeDesktopPreferences(filename, { automaticUpdates: true, secret: 'non' }), {
+  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: false, mode: '' });
+  assert.deepEqual(
+    writeDesktopPreferences(filename, {
+      automaticUpdates: true,
+      mode: 'client',
+      secret: 'non',
+    }),
+    { automaticUpdates: true, mode: 'client' },
+  );
+  assert.deepEqual(readDesktopPreferences(filename), {
     automaticUpdates: true,
+    mode: 'client',
   });
-  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: true });
   assert.equal(fs.existsSync(`${filename}.tmp`), false);
 
   fs.writeFileSync(filename, '{invalide');
-  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: false });
+  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: false, mode: '' });
   fs.writeFileSync(filename, JSON.stringify({ automaticUpdates: 'oui' }));
-  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: false });
+  assert.deepEqual(readDesktopPreferences(filename), { automaticUpdates: false, mode: '' });
 });
 
 test('la détection de version accepte les tags Wattelier et verrouille les liens GitHub', () => {

@@ -32,6 +32,13 @@ try {
   assert.equal(initial.onboardingCompleted, false);
   assert.equal(initial.authRequired, true);
 
+  const insecureSetup = await fetch(`${base}/api/setup/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ public_server_url: 'http://serveur.example' }),
+  });
+  assert.equal(insecureSetup.status, 400);
+
   const setupResponse = await fetch(`${base}/api/setup/complete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -49,11 +56,20 @@ try {
       offpeak_share: '0.5',
       subscription_month: '10',
       kva: '6',
+      public_server_url: 'https://pc.maison.ts.net',
     }),
   });
   assert.equal(setupResponse.status, 200);
   const setup = await setupResponse.json();
   assert.match(setup.accessToken, /^se_[A-Za-z0-9_-]{40,}$/);
+  assert.match(setup.connectionToken, /^wtl1_/);
+
+  const bundledLogin = await fetch(`${base}/api/auth/session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: setup.connectionToken }),
+  });
+  assert.equal(bundledLogin.status, 200);
 
   const unauthorized = await fetch(`${base}/api/status`);
   assert.equal(unauthorized.status, 401);

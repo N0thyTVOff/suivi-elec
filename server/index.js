@@ -48,6 +48,11 @@ import {
   setAuthCookie,
 } from './auth.js';
 import { supportedTariffs } from './tariffs.js';
+import {
+  accessTokenFromInput,
+  normalizeRemoteServerUrl,
+  optionalConnectionToken,
+} from './connection-token.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PORT = Number(process.env.PORT) || 3017;
@@ -56,6 +61,20 @@ let activePort = DEFAULT_PORT;
 let activeHost = DEFAULT_HOST;
 let activeServer = null;
 const appTimers = new Set();
+
+function normalizePublicUrlSetting(settings) {
+  if (!Object.hasOwn(settings, 'public_server_url')) return settings;
+  const value = String(settings.public_server_url).trim();
+  return { ...settings, public_server_url: value ? normalizeRemoteServerUrl(value) : '' };
+}
+
+function accessTokens() {
+  const accessToken = issueAccessToken();
+  return {
+    accessToken,
+    connectionToken: optionalConnectionToken(getSetting('public_server_url'), accessToken),
+  };
+}
 
 function every(callback, delay) {
   const timer = setInterval(callback, delay);
@@ -102,16 +121,21 @@ app.post('/api/setup/complete', sensitiveLimit, async (req, res) => {
   if (onboardingCompleted()) {
     return res.status(409).json({ error: 'la configuration initiale est déjà terminée' });
   }
-  const settings = editableSettings(req.body);
+  let settings;
+  try {
+    settings = normalizePublicUrlSetting(editableSettings(req.body));
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
   for (const [key, value] of Object.entries(settings)) setSetting(key, value);
   setSetting('linky_enabled', req.body?.linky_enabled ? '1' : '0');
   setSetting('ewelink_enabled', req.body?.ewelink_enabled ? '1' : '0');
   setSetting('omajin_enabled', req.body?.omajin_enabled ? '1' : '0');
   setSetting('onboarding_completed', '1');
-  const token = issueAccessToken();
-  setAuthCookie(req, res, token);
+  const tokens = accessTokens();
+  setAuthCookie(req, res, tokens.accessToken);
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ ok: true, accessToken: token });
+  res.json({ ok: true, ...tokens });
   startLinky();
   startSonoff().catch((err) => console.error('[sonoff] démarrage :', err.message));
   startOmajin().catch((err) => console.error('[omajin] démarrage :', err.message));
@@ -122,7 +146,12 @@ app.post('/api/auth/session', sensitiveLimit, (req, res) => {
     return res.status(428).json({ error: 'configuration initiale requise' });
   }
   if (!authRequired()) return res.json({ ok: true });
-  const token = typeof req.body?.token === 'string' ? req.body.token : '';
+  let token = '';
+  try {
+    token = accessTokenFromInput(req.body?.token);
+  } catch {
+    // Le même message est conservé pour ne révéler aucun détail sur le format attendu.
+  }
   if (!isAuthorized(req, token)) return res.status(401).json({ error: 'jeton invalide' });
   setAuthCookie(req, res, token);
   res.json({ ok: true });
@@ -131,10 +160,10 @@ app.post('/api/auth/session', sensitiveLimit, (req, res) => {
 app.use('/api', requireApiAuth);
 
 app.post('/api/auth/rotate', (req, res) => {
-  const token = issueAccessToken();
-  setAuthCookie(req, res, token);
+  const tokens = accessTokens();
+  setAuthCookie(req, res, tokens.accessToken);
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ ok: true, accessToken: token });
+  res.json({ ok: true, ...tokens });
 });
 
 app.delete('/api/auth/session', (req, res) => {
@@ -259,7 +288,13 @@ app.post('/api/settings', async (req, res) => {
     getSetting('tuya_device_ids'),
   ].join('\0');
 
-  for (const [key, value] of Object.entries(editableSettings(req.body))) {
+  let nextSettings;
+  try {
+    nextSettings = normalizePublicUrlSetting(editableSettings(req.body));
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  for (const [key, value] of Object.entries(nextSettings)) {
     setSetting(key, value);
   }
 

@@ -1036,6 +1036,23 @@ form.settings textarea,
   display: block;
 }
 
+.subpanel,
+.onboarding-remote {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--page) 72%, transparent);
+  padding: 16px;
+}
+
+.onboarding-remote {
+  margin-top: 18px;
+}
+
+.onboarding-remote h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
 .choice-card small {
   margin-top: 5px;
   color: var(--ink2);

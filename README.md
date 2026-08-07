@@ -28,9 +28,9 @@ Comparez le SHA-256 du fichier avec `SHA256SUMS.txt`. La première version peut 
 Windows SmartScreen affiche alors un avertissement malgré une somme correcte. Les détails, les
 emplacements de données et la migration sont dans [INSTALLATION.md](INSTALLATION.md).
 
-Au premier lancement, Wattelier peut importer l’ancien fichier `data/elec.db`. L’assistant permet
-ensuite de choisir séparément Linky, eWeLink et Omajin, de configurer le contrat et de générer le
-jeton à conserver pour les autres appareils.
+Au premier lancement des deux éditions, Wattelier propose de créer le serveur sur ce PC ou de se
+connecter à un serveur existant en collant une seule fois son jeton de connexion. En mode serveur,
+Wattelier peut importer l’ancien fichier `data/elec.db`, puis configure les sources et le contrat.
 
 ## Fonctionnalités
 
@@ -42,7 +42,8 @@ jeton à conserver pour les autres appareils.
 - tarifs Base, HP/HC, Tempo, EJP ou personnalisés, budget et échéancier ;
 - connecteurs Linky/eWeLink/Omajin activables indépendamment et mode de démonstration ;
 - export CSV, journal d’événements et API HTTP `/api/*` stable pour le futur client iOS ;
-- serveur accessible sur le réseau local, protégé par un jeton ;
+- serveur accessible sur le réseau local, protégé par un jeton autonome pour les clients distants ;
+- accès HTTPS privé facultatif et guidé avec Tailscale Serve ;
 - application Windows avec zone de notification et collecte en arrière-plan.
 
 La puissance instantanée affichée est celle des prises mesurées. Wattelier ne présente jamais

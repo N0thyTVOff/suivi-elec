@@ -12,6 +12,7 @@ export function resolveRuntimePaths({ portableDirectory, userDataDirectory }) {
     logsDirectory: path.join(root, 'logs'),
     databasePath: path.join(root, 'elec.db'),
     preferencesPath: path.join(root, 'desktop-preferences.json'),
+    connectionPath: path.join(root, 'desktop-connection.bin'),
   };
 }
 

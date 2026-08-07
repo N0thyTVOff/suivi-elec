@@ -143,6 +143,7 @@ const DEFAULT_SETTINGS = {
   onboarding_completed: hadExistingSettings ? '1' : '0',
   server_auth_enabled: hadExistingSettings ? '0' : '1',
   server_token_hash: '',
+  public_server_url: '',
   demo_mode: '0',
   raw_retention_days: '30',
   budget_month_eur: '', // objectif de facture mensuelle (vide = désactivé)

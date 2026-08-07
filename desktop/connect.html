@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Connexion à Wattelier</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: 'Segoe UI', sans-serif;
+        background: #090f1f;
+        color: #eef4ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: radial-gradient(circle at top, #142652, #090f1f 60%);
+      }
+      main {
+        width: min(520px, 100%);
+        padding: 30px;
+        border: 1px solid #29406f;
+        border-radius: 20px;
+        background: #101a31;
+        box-shadow: 0 22px 60px #0008;
+      }
+      .brand {
+        color: #63a4ff;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+      }
+      h1 {
+        margin: 12px 0 8px;
+        font-size: 28px;
+      }
+      p {
+        color: #afbdd6;
+        line-height: 1.5;
+      }
+      label {
+        display: grid;
+        gap: 8px;
+        margin-top: 22px;
+        font-weight: 700;
+      }
+      textarea {
+        min-height: 112px;
+        resize: vertical;
+        border: 1px solid #355284;
+        border-radius: 12px;
+        padding: 12px;
+        background: #091226;
+        color: #fff;
+        font:
+          14px ui-monospace,
+          monospace;
+      }
+      textarea:focus {
+        outline: 3px solid #2979ff66;
+        border-color: #63a4ff;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+      }
+      button {
+        min-height: 44px;
+        border: 0;
+        border-radius: 10px;
+        padding: 0 18px;
+        font-weight: 750;
+        cursor: pointer;
+        color: #fff;
+        background: #2878ff;
+      }
+      button.secondary {
+        background: #263653;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      #error {
+        min-height: 22px;
+        color: #ff809f;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">WATTELIER</div>
+      <h1>Accéder à mon serveur</h1>
+      <p>
+        Collez le jeton de connexion créé sur votre serveur. Il contient déjà son adresse HTTPS.
+      </p>
+      <form id="form">
+        <label
+          >Jeton de connexion<textarea
+            id="token"
+            autofocus
+            required
+            autocomplete="off"
+            spellcheck="false"
+          ></textarea>
+        </label>
+        <p id="error" role="alert"></p>
+        <div class="actions">
+          <button class="secondary" id="cancel" type="button">Annuler</button>
+          <button id="submit" type="submit">Se connecter</button>
+        </div>
+      </form>
+    </main>
+    <script>
+      const form = document.querySelector('#form');
+      const token = document.querySelector('#token');
+      const error = document.querySelector('#error');
+      const submit = document.querySelector('#submit');
+      document
+        .querySelector('#cancel')
+        .addEventListener('click', () => window.wattelierConnect.cancel());
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        error.textContent = '';
+        submit.disabled = true;
+        const result = await window.wattelierConnect.submit(token.value);
+        if (!result.ok) {
+          error.textContent = result.error;
+          submit.disabled = false;
+          token.focus();
+        }
+      });
+    </script>
+  </body>
+</html>

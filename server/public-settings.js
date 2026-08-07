@@ -34,6 +34,7 @@ const EDITABLE_KEYS = new Set([
   'billing_start',
   'billing_end',
   'unmetered_note',
+  'public_server_url',
 ]);
 
 /**

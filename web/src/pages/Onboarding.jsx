@@ -31,6 +31,7 @@ const defaults = {
   ejp_peak: '1.5197',
   subscription_month: '13.09',
   kva: '6',
+  public_server_url: '',
 };
 
 function Toggle({ checked, onChange, children }) {
@@ -48,6 +49,7 @@ export default function Onboarding({ tariffs, onReady }) {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [tailscaleBusy, setTailscaleBusy] = useState(false);
   const set = (key) => (e) => setForm((v) => ({ ...v, [key]: e.target.value }));
 
   const finish = async () => {
@@ -55,12 +57,25 @@ export default function Onboarding({ tariffs, onReady }) {
     setError('');
     try {
       const result = await post('setup/complete', form);
-      setToken(result.accessToken);
+      setToken(result.connectionToken || result.accessToken);
       setStep(3);
     } catch (err) {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const enableTailscale = async () => {
+    setTailscaleBusy(true);
+    setError('');
+    try {
+      const result = await window.wattelierDesktop.enableTailscale();
+      setForm((current) => ({ ...current, public_server_url: result.serverUrl }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setTailscaleBusy(false);
     }
   };
 
@@ -318,6 +333,36 @@ export default function Onboarding({ tariffs, onReady }) {
                 </label>
               )}
             </div>
+            <div className="onboarding-remote">
+              <h2>Accès distant (facultatif)</h2>
+              <p className="note">
+                Tailscale relie vos appareils dans un réseau privé. Le PC serveur et chaque appareil
+                distant devront être connectés au même compte Tailscale.
+              </p>
+              {window.wattelierDesktop?.enableTailscale && (
+                <button
+                  className="btn secondary"
+                  type="button"
+                  onClick={enableTailscale}
+                  disabled={tailscaleBusy}
+                >
+                  {tailscaleBusy ? 'Configuration…' : 'Configurer automatiquement Tailscale'}
+                </button>
+              )}
+              <label style={{ display: 'block', marginTop: 12 }}>
+                Adresse HTTPS du serveur
+                <input
+                  type="url"
+                  value={form.public_server_url}
+                  onChange={set('public_server_url')}
+                  placeholder="https://mon-pc.mon-tailnet.ts.net"
+                />
+              </label>
+              <small className="note">
+                Vous pouvez laisser ce champ vide et configurer l’accès distant plus tard dans les
+                réglages.
+              </small>
+            </div>
             {error && <p className="form-error">{error}</p>}
             <div className="onboarding-actions">
               <button className="btn secondary" onClick={() => setStep(1)}>
@@ -332,10 +377,11 @@ export default function Onboarding({ tariffs, onReady }) {
 
         {step === 3 && (
           <>
-            <h1>Conservez votre jeton d’accès</h1>
+            <h1>Conservez votre jeton de connexion</h1>
             <p>
-              Il protège toutes les données du serveur et sera demandé une seule fois dans l’app
-              mobile. Il ne pourra plus être affiché après cette page.
+              Il protège toutes les données du serveur et sera demandé une seule fois dans
+              l’application distante. S’il commence par « wtl1_ », il contient aussi l’adresse du
+              serveur : une seule valeur suffit.
             </p>
             <div className="token-box">
               <code>{token}</code>
@@ -347,8 +393,8 @@ export default function Onboarding({ tariffs, onReady }) {
               </button>
             </div>
             <p className="warning-note">
-              Pour un accès depuis Internet, placez le serveur derrière HTTPS ou un VPN. N’ouvrez
-              jamais directement le port HTTP sur votre box.
+              Cette valeur permet aussi de contrôler les appareils : traitez-la comme un mot de
+              passe. N’ouvrez jamais directement le port HTTP sur votre box.
             </p>
             <div className="onboarding-actions">
               <button className="btn" onClick={onReady}>
@@ -386,7 +432,7 @@ export function ServerLogin({ onReady }) {
         <h1>Connexion sécurisée</h1>
         <p>Saisissez une fois le jeton fourni par votre serveur.</p>
         <label>
-          Jeton d’accès
+          Jeton d’accès ou de connexion
           <input
             autoFocus
             type="password"

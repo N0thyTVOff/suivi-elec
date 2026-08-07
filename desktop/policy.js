@@ -21,13 +21,20 @@ export function isTrustedDesktopUrl(senderUrl, port) {
   }
 }
 
-/** @param {{ version: string, portable: boolean, openAtLogin: boolean, automaticUpdates?: boolean }} options */
-export function desktopRuntimeInfo({ version, portable, openAtLogin, automaticUpdates = false }) {
+/** @param {{ version: string, portable: boolean, openAtLogin: boolean, automaticUpdates?: boolean, applicationMode?: 'server' | 'client' }} options */
+export function desktopRuntimeInfo({
+  version,
+  portable,
+  openAtLogin,
+  automaticUpdates = false,
+  applicationMode = 'server',
+}) {
   return {
     version,
     mode: portable ? 'portable' : 'installed',
     portable: Boolean(portable),
     openAtLogin: portable ? false : Boolean(openAtLogin),
     automaticUpdates: portable ? false : Boolean(automaticUpdates),
+    applicationMode,
   };
 }

@@ -1,12 +1,30 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain, Menu, net, shell, Tray } from 'electron';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  Menu,
+  net,
+  safeStorage,
+  session,
+  shell,
+  Tray,
+} from 'electron';
+import {
+  clearDesktopConnection,
+  readDesktopConnection,
+  writeDesktopConnection,
+} from './connection-store.js';
 import { importLegacyDatabase } from './legacy-import.js';
 import { desktopRuntimeInfo, isTrustedDesktopUrl, requestSingleInstance } from './policy.js';
 import { readDesktopPreferences, writeDesktopPreferences } from './preferences.js';
 import { loginItemOptions, resolveDesktopAssetPath, resolveRuntimePaths } from './runtime-paths.js';
+import { enableTailscaleServe, tailscaleStatus } from './tailscale.js';
 import { createDesktopUpdater } from './updater.js';
+import { parseConnectionToken } from '../server/connection-token.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3017;
@@ -23,6 +41,8 @@ let serverReady = false;
 let runtimePaths;
 let desktopPreferences;
 let updater;
+let applicationMode = 'server';
+let remoteConnection = null;
 
 function desktopAsset(filename) {
   return resolveDesktopAssetPath({
@@ -46,6 +66,15 @@ function isTrustedSender(event) {
   return isTrustedDesktopUrl(event.senderFrame?.url, PORT);
 }
 
+function safeHttpsUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 function currentLoginState() {
   if (runtimePaths.portable) return false;
   return app.getLoginItemSettings(loginItemOptions(process.execPath)).openAtLogin;
@@ -59,6 +88,7 @@ function registerDesktopBridge() {
       portable: runtimePaths.portable,
       openAtLogin: currentLoginState(),
       automaticUpdates: desktopPreferences.automaticUpdates,
+      applicationMode,
     });
   });
   ipcMain.handle('wattelier:set-open-at-login', (event, enabled) => {
@@ -83,6 +113,123 @@ function registerDesktopBridge() {
     if (!isTrustedSender(event)) throw new Error('Origine non autorisée');
     return updater.checkForUpdates({ manual: true });
   });
+  ipcMain.handle('wattelier:tailscale-status', async (event) => {
+    if (!isTrustedSender(event) || applicationMode !== 'server') {
+      throw new Error('Origine non autorisée');
+    }
+    return tailscaleStatus();
+  });
+  ipcMain.handle('wattelier:tailscale-enable', async (event) => {
+    if (!isTrustedSender(event) || applicationMode !== 'server') {
+      throw new Error('Origine non autorisée');
+    }
+    return enableTailscaleServe(PORT);
+  });
+}
+
+async function validateRemoteConnection(connection) {
+  const response = await net.fetch(`${connection.serverUrl}/api/setup/status`, {
+    headers: { Authorization: `Bearer ${connection.accessToken}` },
+    redirect: 'error',
+  });
+  if (!response.ok) throw new Error(`Le serveur a répondu ${response.status}.`);
+  const status = await response.json();
+  if (!status.onboardingCompleted || !status.authenticated) {
+    throw new Error('Ce jeton est refusé par le serveur.');
+  }
+}
+
+function requestRemoteConnection() {
+  return new Promise((resolve) => {
+    const connectUrl = pathToFileURL(path.join(__dirname, 'connect.html')).href;
+    const connectWindow = new BrowserWindow({
+      title: 'Connexion à Wattelier',
+      width: 620,
+      height: 570,
+      minWidth: 320,
+      minHeight: 520,
+      backgroundColor: '#090f1f',
+      icon: desktopAsset('icon.png'),
+      webPreferences: {
+        preload: path.join(__dirname, 'connect-preload.cjs'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        devTools: !app.isPackaged,
+      },
+    });
+    connectWindow.removeMenu();
+    connectWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    connectWindow.webContents.on('will-navigate', (event, url) => {
+      if (url !== connectUrl) event.preventDefault();
+    });
+    let completed = false;
+    const finish = (connection) => {
+      if (completed) return;
+      completed = true;
+      ipcMain.removeHandler('wattelier:connect-submit');
+      ipcMain.removeAllListeners('wattelier:connect-cancel');
+      if (!connectWindow.isDestroyed()) connectWindow.destroy();
+      resolve(connection);
+    };
+    ipcMain.handle('wattelier:connect-submit', async (event, value) => {
+      if (event.senderFrame?.url !== connectUrl)
+        return { ok: false, error: 'Origine non autorisée.' };
+      try {
+        const connection = parseConnectionToken(value);
+        await validateRemoteConnection(connection);
+        await writeDesktopConnection(runtimePaths.connectionPath, value, safeStorage);
+        desktopPreferences = writeDesktopPreferences(runtimePaths.preferencesPath, {
+          ...desktopPreferences,
+          mode: 'client',
+        });
+        finish(connection);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: error.message || 'Connexion impossible.' };
+      }
+    });
+    ipcMain.once('wattelier:connect-cancel', () => finish(null));
+    connectWindow.on('closed', () => finish(null));
+    connectWindow.loadURL(connectUrl);
+  });
+}
+
+async function chooseApplicationMode() {
+  if (desktopPreferences.mode === 'client') {
+    const saved = await readDesktopConnection(runtimePaths.connectionPath, safeStorage);
+    if (saved) return { mode: 'client', connection: saved };
+  }
+  if (desktopPreferences.mode === 'server' || fs.existsSync(runtimePaths.databasePath)) {
+    desktopPreferences = writeDesktopPreferences(runtimePaths.preferencesPath, {
+      ...desktopPreferences,
+      mode: 'server',
+    });
+    return { mode: 'server' };
+  }
+  if (process.env.WATTELIER_SKIP_LEGACY_IMPORT === '1') return { mode: 'server' };
+
+  const choice = await dialog.showMessageBox({
+    type: 'question',
+    title: 'Bienvenue dans Wattelier',
+    message: 'Comment souhaitez-vous utiliser Wattelier ?',
+    detail:
+      'Créez le serveur énergétique sur ce PC, ou connectez cette application à un serveur Wattelier déjà configuré.',
+    buttons: ['Créer mon serveur', 'Accéder à mon serveur distant', 'Annuler'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+  if (choice.response === 2) return null;
+  if (choice.response === 1) {
+    const connection = await requestRemoteConnection();
+    return connection ? { mode: 'client', connection } : null;
+  }
+  desktopPreferences = writeDesktopPreferences(runtimePaths.preferencesPath, {
+    ...desktopPreferences,
+    mode: 'server',
+  });
+  return { mode: 'server' };
 }
 
 async function offerLegacyImport() {
@@ -122,7 +269,8 @@ async function offerLegacyImport() {
   }
 }
 
-function createWindow() {
+async function createWindow() {
+  const remote = applicationMode === 'client';
   mainWindow = new BrowserWindow({
     title: 'Wattelier',
     width: 1280,
@@ -133,7 +281,7 @@ function createWindow() {
     backgroundColor: '#090f1f',
     icon: desktopAsset('icon.png'),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
+      ...(remote ? {} : { preload: path.join(__dirname, 'preload.cjs') }),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -141,12 +289,22 @@ function createWindow() {
     },
   });
   mainWindow.removeMenu();
+  mainWindow.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) =>
+    callback(false),
+  );
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://')) shell.openExternal(url);
+    if (safeHttpsUrl(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(LOCAL_URL)) event.preventDefault();
+    const expectedOrigin = remote ? new URL(remoteConnection.serverUrl).origin : LOCAL_URL;
+    let allowed;
+    try {
+      allowed = new URL(url).origin === expectedOrigin;
+    } catch {
+      allowed = false;
+    }
+    if (!allowed) event.preventDefault();
   });
   mainWindow.on('close', (event) => {
     if (!quitting) {
@@ -157,23 +315,60 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     if (!hiddenLaunch) showWindow();
   });
-  mainWindow.loadURL(LOCAL_URL);
+  if (remote) {
+    await session.defaultSession.cookies.set({
+      url: remoteConnection.serverUrl,
+      name: 'wattelier_token',
+      value: remoteConnection.accessToken,
+      secure: true,
+      httpOnly: true,
+      sameSite: 'strict',
+      expirationDate: Math.floor(Date.now() / 1000) + 365 * 24 * 3600,
+    });
+  }
+  mainWindow.loadURL(remote ? remoteConnection.serverUrl : LOCAL_URL);
 }
 
 function createTray() {
   tray = new Tray(desktopAsset('tray.ico'));
-  tray.setToolTip('Wattelier — serveur énergétique actif');
+  tray.setToolTip(
+    applicationMode === 'server'
+      ? 'Wattelier — serveur énergétique actif'
+      : 'Wattelier — accès distant',
+  );
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Ouvrir Wattelier', click: showWindow },
       {
-        label: serverReady ? 'Serveur actif sur le port 3017' : 'Démarrage du serveur…',
+        label:
+          applicationMode === 'client'
+            ? `Connecté à ${new URL(remoteConnection.serverUrl).hostname}`
+            : serverReady
+              ? 'Serveur actif sur le port 3017'
+              : 'Démarrage du serveur…',
         enabled: false,
       },
       {
         label: 'Rechercher une mise à jour',
         click: () => updater.checkForUpdates({ manual: true }),
       },
+      ...(applicationMode === 'client'
+        ? [
+            {
+              label: 'Changer de serveur distant',
+              click: () => {
+                clearDesktopConnection(runtimePaths.connectionPath);
+                writeDesktopPreferences(runtimePaths.preferencesPath, {
+                  ...desktopPreferences,
+                  mode: '',
+                });
+                quitting = true;
+                app.relaunch();
+                app.quit();
+              },
+            },
+          ]
+        : []),
       { type: 'separator' },
       { label: 'Quitter Wattelier', click: () => app.quit() },
     ]),
@@ -189,18 +384,24 @@ async function startApplication() {
   desktopPreferences = readDesktopPreferences(runtimePaths.preferencesPath);
   fs.mkdirSync(runtimePaths.logsDirectory, { recursive: true });
   app.setAppLogsPath(runtimePaths.logsDirectory);
-  await offerLegacyImport();
-  process.env.DATA_DIR = runtimePaths.dataDirectory;
-  process.env.HOST = process.env.HOST || '0.0.0.0';
-  process.env.PORT = String(PORT);
-  const serverModule = await import('../server/index.js');
-  stopServer = serverModule.stopServer;
-  await serverModule.startServer({
-    host: process.env.HOST,
-    port: PORT,
-    dataDir: runtimePaths.dataDirectory,
-  });
-  serverReady = true;
+  const selection = await chooseApplicationMode();
+  if (!selection) throw new Error('Démarrage annulé');
+  applicationMode = selection.mode;
+  remoteConnection = selection.connection || null;
+  if (applicationMode === 'server') {
+    await offerLegacyImport();
+    process.env.DATA_DIR = runtimePaths.dataDirectory;
+    process.env.HOST = process.env.HOST || '0.0.0.0';
+    process.env.PORT = String(PORT);
+    const serverModule = await import('../server/index.js');
+    stopServer = serverModule.stopServer;
+    await serverModule.startServer({
+      host: process.env.HOST,
+      port: PORT,
+      dataDir: runtimePaths.dataDirectory,
+    });
+    serverReady = true;
+  }
   if (!runtimePaths.portable) {
     const marker = path.join(runtimePaths.dataDirectory, '.startup-configured');
     if (!fs.existsSync(marker)) {
@@ -224,9 +425,9 @@ async function startApplication() {
     },
     getWindow: () => mainWindow,
   });
-  registerDesktopBridge();
+  if (applicationMode === 'server') registerDesktopBridge();
   createTray();
-  createWindow();
+  await createWindow();
   setTimeout(() => updater.checkForUpdates(), 10_000);
 }
 

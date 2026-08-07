@@ -24,7 +24,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
-    "test": "node --test --experimental-test-coverage --test-coverage-include=desktop/policy.js --test-coverage-include=desktop/preferences.js --test-coverage-include=desktop/runtime-paths.js --test-coverage-include=desktop/update-policy.js --test-coverage-include=server/http-utils.js --test-coverage-include=server/omajin/client.js --test-coverage-include=server/omajin/model.js --test-coverage-include=server/public-settings.js --test-coverage-include=server/token-utils.js --test-coverage-include=test/**/*.js --test-coverage-lines=90 --test-coverage-functions=90 --test-coverage-branches=85",
+    "test": "node --test --experimental-test-coverage --test-coverage-include=desktop/connection-store.js --test-coverage-include=desktop/policy.js --test-coverage-include=desktop/preferences.js --test-coverage-include=desktop/runtime-paths.js --test-coverage-include=desktop/tailscale.js --test-coverage-include=desktop/update-policy.js --test-coverage-include=server/connection-token.js --test-coverage-include=server/http-utils.js --test-coverage-include=server/omajin/client.js --test-coverage-include=server/omajin/model.js --test-coverage-include=server/public-settings.js --test-coverage-include=server/token-utils.js --test-coverage-include=test/**/*.js --test-coverage-lines=90 --test-coverage-functions=90 --test-coverage-branches=85",
     "test:e2e": "playwright test",
     "test:smoke": "node scripts/smoke-onboarding.js",
     "typecheck": "tsc --noEmit",

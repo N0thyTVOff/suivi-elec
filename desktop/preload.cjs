@@ -6,4 +6,6 @@ contextBridge.exposeInMainWorld('wattelierDesktop', {
   setAutomaticUpdates: (enabled) =>
     ipcRenderer.invoke('wattelier:set-automatic-updates', Boolean(enabled)),
   checkForUpdates: () => ipcRenderer.invoke('wattelier:check-for-updates'),
+  getTailscaleStatus: () => ipcRenderer.invoke('wattelier:tailscale-status'),
+  enableTailscale: () => ipcRenderer.invoke('wattelier:tailscale-enable'),
 });

@@ -41,11 +41,15 @@ function commandOutput(error) {
   return `${stdout}\n${stderr}`;
 }
 
-/** @param {unknown} error */
-function serveApprovalUrl(error) {
-  return commandOutput(error).match(
+/** @param {unknown} error @param {string} localNodeId */
+function serveApprovalUrl(error, localNodeId) {
+  const reportedUrl = commandOutput(error).match(
     /https:\/\/login\.tailscale\.com\/f\/serve\?node=[A-Za-z0-9_-]+/,
   )?.[0];
+  if (!reportedUrl || !/^[A-Za-z0-9_-]+$/.test(localNodeId)) return '';
+  const approvalUrl = new URL(reportedUrl);
+  approvalUrl.searchParams.set('node', localNodeId);
+  return approvalUrl.href;
 }
 
 /** @param {string[]} args @param {Execute} execute @param {number} timeout */
@@ -69,6 +73,7 @@ function statusFromJson(stdout) {
   const status = JSON.parse(stdout);
   const dnsName = String(status.Self?.DNSName || '').replace(/\.$/, '');
   return {
+    nodeId: String(status.Self?.ID || ''),
     installed: true,
     connected: status.BackendState === 'Running' && Boolean(dnsName),
     dnsName,
@@ -76,8 +81,19 @@ function statusFromJson(stdout) {
   };
 }
 
+/** @param {{ nodeId: string, installed: boolean, connected: boolean, dnsName: string, serverUrl: string, error?: string }} status */
+function publicStatus(status) {
+  return {
+    installed: status.installed,
+    connected: status.connected,
+    dnsName: status.dnsName,
+    serverUrl: status.serverUrl,
+    ...(status.error === undefined ? {} : { error: status.error }),
+  };
+}
+
 /** @param {Execute} execute */
-export async function tailscaleStatus(execute = executeFile) {
+async function tailscaleStatusWithIdentity(execute) {
   try {
     const { stdout } = await runTailscale(['status', '--json'], execute);
     return statusFromJson(stdout);
@@ -89,6 +105,7 @@ export async function tailscaleStatus(execute = executeFile) {
           ? error.message
           : 'Tailscale est indisponible.';
     return {
+      nodeId: '',
       installed: message !== "Tailscale n'est pas installé.",
       connected: false,
       dnsName: '',
@@ -98,15 +115,21 @@ export async function tailscaleStatus(execute = executeFile) {
   }
 }
 
+/** @param {Execute} execute */
+export async function tailscaleStatus(execute = executeFile) {
+  return publicStatus(await tailscaleStatusWithIdentity(execute));
+}
+
 /** @param {number} port @param {Execute} execute */
 export async function enableTailscaleServe(port, execute = executeFile) {
-  const status = await tailscaleStatus(execute);
+  const statusWithIdentity = await tailscaleStatusWithIdentity(execute);
+  const status = publicStatus(statusWithIdentity);
   if (!status.installed) throw new Error("Tailscale n'est pas installé.");
   if (!status.connected) throw new Error("Connectez d'abord ce PC à Tailscale.");
   try {
     await runTailscale(['serve', '--bg', `http://127.0.0.1:${Number(port)}`], execute, 5_000);
   } catch (error) {
-    const approvalUrl = serveApprovalUrl(error);
+    const approvalUrl = serveApprovalUrl(error, statusWithIdentity.nodeId);
     if (approvalUrl) {
       return { ...status, enabled: false, needsApproval: true, approvalUrl };
     }

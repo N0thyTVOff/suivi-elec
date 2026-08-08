@@ -111,7 +111,7 @@ test('le module Tailscale détecte le tailnet et active Serve sur le serveur loc
       return {
         stdout: JSON.stringify({
           BackendState: 'Running',
-          Self: { DNSName: 'pc.maison.ts.net.' },
+          Self: { ID: 'local_node', DNSName: 'pc.maison.ts.net.' },
         }),
       };
     }
@@ -151,7 +151,7 @@ test('le module Tailscale signale une installation absente sans exposer la comma
   );
 });
 
-test('le module Tailscale détecte l’autorisation Serve requise sans attendre 30 secondes', async () => {
+test('le module Tailscale corrige un lien Serve visant un autre appareil', async () => {
   /** @type {object[]} */
   const optionsSeen = [];
   /** @param {string} _executable @param {string[]} args @param {object} options */
@@ -161,7 +161,7 @@ test('le module Tailscale détecte l’autorisation Serve requise sans attendre 
       return {
         stdout: JSON.stringify({
           BackendState: 'Running',
-          Self: { DNSName: 'pc.maison.ts.net.' },
+          Self: { ID: 'local_456', DNSName: 'pc.maison.ts.net.' },
         }),
       };
     }
@@ -181,7 +181,7 @@ test('le module Tailscale détecte l’autorisation Serve requise sans attendre 
     serverUrl: 'https://pc.maison.ts.net',
     enabled: false,
     needsApproval: true,
-    approvalUrl: 'https://login.tailscale.com/f/serve?node=abc_123',
+    approvalUrl: 'https://login.tailscale.com/f/serve?node=local_456',
   });
   assert.deepEqual(optionsSeen.at(-1), {
     timeout: 5_000,

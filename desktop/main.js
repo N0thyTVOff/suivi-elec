@@ -19,6 +19,7 @@ import {
   writeDesktopConnection,
 } from './connection-store.js';
 import { importLegacyDatabase } from './legacy-import.js';
+import { readOpenAtLogin, updateOpenAtLogin } from './login-item.js';
 import { desktopRuntimeInfo, isTrustedDesktopUrl, requestSingleInstance } from './policy.js';
 import { readDesktopPreferences, writeDesktopPreferences } from './preferences.js';
 import { cancelApplicationReset, performPendingReset, requestApplicationReset } from './reset.js';
@@ -78,7 +79,7 @@ function safeHttpsUrl(value) {
 
 function currentLoginState() {
   if (runtimePaths.portable) return false;
-  return app.getLoginItemSettings(loginItemOptions(process.execPath)).openAtLogin;
+  return readOpenAtLogin(app, process.execPath);
 }
 
 async function confirmApplicationReset() {
@@ -122,11 +123,8 @@ function registerDesktopBridge() {
   ipcMain.handle('wattelier:set-open-at-login', (event, enabled) => {
     if (!isTrustedSender(event)) throw new Error('Origine non autorisée');
     if (runtimePaths.portable) return { openAtLogin: false, portable: true };
-    app.setLoginItemSettings({
-      ...loginItemOptions(process.execPath),
-      openAtLogin: Boolean(enabled),
-    });
-    return { openAtLogin: currentLoginState(), portable: false };
+    const openAtLogin = updateOpenAtLogin(app, process.execPath, enabled);
+    return { openAtLogin, portable: false };
   });
   ipcMain.handle('wattelier:set-automatic-updates', (event, enabled) => {
     if (!isTrustedSender(event)) throw new Error('Origine non autorisée');
@@ -480,6 +478,7 @@ async function startApplication() {
       app.setLoginItemSettings({
         ...loginItemOptions(process.execPath),
         openAtLogin: true,
+        enabled: true,
       });
       fs.writeFileSync(marker, '1');
     }

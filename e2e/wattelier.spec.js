@@ -5,6 +5,7 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
   await page.addInitScript(() => {
     let automaticUpdates = false;
+    let openAtLoginAttempts = 0;
     let tailscaleAttempts = 0;
     window.wattelierDesktop = {
       getRuntimeInfo: async () => ({
@@ -15,7 +16,11 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
         automaticUpdates,
         applicationMode: 'server',
       }),
-      setOpenAtLogin: async (enabled) => ({ openAtLogin: enabled, portable: false }),
+      setOpenAtLogin: async (enabled) => {
+        openAtLoginAttempts += 1;
+        if (openAtLoginAttempts === 2) throw new Error('Windows a refusé la modification.');
+        return { openAtLogin: enabled, portable: false };
+      },
       setAutomaticUpdates: async (enabled) => {
         automaticUpdates = enabled;
         return { automaticUpdates, phase: 'idle' };
@@ -97,6 +102,15 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   await expect(page.getByRole('heading', { name: 'Prises Omajin OSP-FR-01 (Tuya)' })).toBeVisible();
   await expect(page.getByLabel('Access ID Tuya')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Application Windows' })).toBeVisible();
+  const openAtLogin = page.getByRole('switch', {
+    name: 'Démarrer Wattelier avec Windows',
+  });
+  await openAtLogin.click();
+  await expect(openAtLogin).toHaveAttribute('aria-checked', 'false');
+  await expect(page.getByText('Démarrage avec Windows désactivé.')).toBeVisible();
+  await openAtLogin.click();
+  await expect(page.getByRole('alert')).toContainText('Windows a refusé la modification.');
+  await expect(openAtLogin).toHaveAttribute('aria-checked', 'false');
   const resetButton = page.getByRole('button', { name: 'Réinitialiser l’application' });
   await resetButton.click();
   await expect(resetButton).toBeEnabled();

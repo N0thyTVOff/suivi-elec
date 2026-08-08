@@ -7,6 +7,9 @@ export default function Settings({ status }) {
   const [saving, setSaving] = useState(false);
   const [newServerToken, setNewServerToken] = useState('');
   const [desktopInfo, setDesktopInfo] = useState(null);
+  const [openAtLoginBusy, setOpenAtLoginBusy] = useState(false);
+  const [openAtLoginMessage, setOpenAtLoginMessage] = useState('');
+  const [openAtLoginError, setOpenAtLoginError] = useState('');
   const [tailscale, setTailscale] = useState(null);
   const [tailscaleBusy, setTailscaleBusy] = useState(false);
   const [tailscaleError, setTailscaleError] = useState('');
@@ -99,8 +102,21 @@ export default function Settings({ status }) {
   };
 
   const toggleOpenAtLogin = async () => {
-    const result = await window.wattelierDesktop.setOpenAtLogin(!desktopInfo.openAtLogin);
-    setDesktopInfo((current) => ({ ...current, ...result }));
+    if (openAtLoginBusy) return;
+    setOpenAtLoginBusy(true);
+    setOpenAtLoginMessage('');
+    setOpenAtLoginError('');
+    try {
+      const result = await window.wattelierDesktop.setOpenAtLogin(!desktopInfo.openAtLogin);
+      setDesktopInfo((current) => ({ ...current, ...result }));
+      setOpenAtLoginMessage(
+        result.openAtLogin ? 'Démarrage avec Windows activé.' : 'Démarrage avec Windows désactivé.',
+      );
+    } catch (error) {
+      setOpenAtLoginError(error.message || 'Windows n’a pas pu modifier le démarrage automatique.');
+    } finally {
+      setOpenAtLoginBusy(false);
+    }
   };
 
   const toggleAutomaticUpdates = async () => {
@@ -154,22 +170,30 @@ export default function Settings({ status }) {
               </p>
             </div>
             {!desktopInfo.portable && (
-              <div
-                className={`toggle ${desktopInfo.openAtLogin ? 'on' : ''}`}
+              <button
+                className={`toggle toggle-button ${desktopInfo.openAtLogin ? 'on' : ''}`}
+                type="button"
                 onClick={toggleOpenAtLogin}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') toggleOpenAtLogin();
-                }}
                 role="switch"
-                tabIndex="0"
                 aria-checked={desktopInfo.openAtLogin}
+                disabled={openAtLoginBusy}
                 aria-label="Démarrer Wattelier avec Windows"
               >
                 <span className="track" />
-                <span>Démarrer avec Windows</span>
-              </div>
+                <span>{openAtLoginBusy ? 'Modification…' : 'Démarrer avec Windows'}</span>
+              </button>
             )}
           </div>
+          {openAtLoginMessage && (
+            <p className="note" role="status" style={{ marginBottom: 0 }}>
+              {openAtLoginMessage}
+            </p>
+          )}
+          {openAtLoginError && (
+            <p className="form-error" role="alert" style={{ marginBottom: 0 }}>
+              {openAtLoginError}
+            </p>
+          )}
           {desktopInfo.portable && (
             <p className="note" style={{ marginBottom: 0 }}>
               Le démarrage automatique est désactivé pour préserver le caractère déplaçable de la

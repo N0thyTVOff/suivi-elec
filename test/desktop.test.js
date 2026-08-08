@@ -13,6 +13,7 @@ import {
   requestSingleInstance,
 } from '../desktop/policy.js';
 import { readDesktopPreferences, writeDesktopPreferences } from '../desktop/preferences.js';
+import { readOpenAtLogin, updateOpenAtLogin } from '../desktop/login-item.js';
 import {
   cancelApplicationReset,
   performPendingReset,
@@ -73,6 +74,82 @@ test('le démarrage Windows utilise le lancement caché', () => {
     path: 'C:\\Program Files\\Wattelier\\Wattelier.exe',
     args: ['--hidden'],
   });
+});
+
+test('le démarrage Windows modifie aussi l’approbation système et vérifie son état effectif', () => {
+  /** @type {Array<{ method: string, options: object }>} */
+  const calls = [];
+  let settings = { openAtLogin: false, executableWillLaunchAtLogin: false };
+  const electronApp = {
+    /** @param {{ path: string, args: string[] }} options */
+    getLoginItemSettings(options) {
+      calls.push({ method: 'get', options });
+      return settings;
+    },
+    /** @param {object} options */
+    setLoginItemSettings(options) {
+      calls.push({ method: 'set', options });
+      const loginOptions = /** @type {{ openAtLogin: boolean, enabled: boolean }} */ (options);
+      settings = {
+        openAtLogin: loginOptions.openAtLogin,
+        executableWillLaunchAtLogin: loginOptions.enabled,
+      };
+    },
+  };
+  const executablePath = 'C:\\Program Files\\Wattelier\\Wattelier.exe';
+
+  assert.equal(updateOpenAtLogin(electronApp, executablePath, true), true);
+  assert.deepEqual(calls[0], {
+    method: 'set',
+    options: {
+      name: 'Wattelier',
+      path: executablePath,
+      args: ['--hidden'],
+      openAtLogin: true,
+      enabled: true,
+    },
+  });
+  assert.deepEqual(calls[1], {
+    method: 'get',
+    options: { path: executablePath, args: ['--hidden'] },
+  });
+
+  assert.equal(updateOpenAtLogin(electronApp, executablePath, false), false);
+  assert.deepEqual(calls[2], {
+    method: 'set',
+    options: {
+      name: 'Wattelier',
+      path: executablePath,
+      args: ['--hidden'],
+      openAtLogin: false,
+      enabled: false,
+    },
+  });
+});
+
+test('le démarrage Windows signale un refus au lieu de laisser le bouton sans réponse', () => {
+  const refusedApp = {
+    setLoginItemSettings() {},
+    getLoginItemSettings() {
+      return { openAtLogin: true, executableWillLaunchAtLogin: false };
+    },
+  };
+  assert.equal(readOpenAtLogin(refusedApp, 'Wattelier.exe'), false);
+  assert.throws(
+    () => updateOpenAtLogin(refusedApp, 'Wattelier.exe', true),
+    /Windows n’a pas activé.*Paramètres.*Démarrage/,
+  );
+
+  const cannotDisableApp = {
+    setLoginItemSettings() {},
+    getLoginItemSettings() {
+      return { openAtLogin: true, executableWillLaunchAtLogin: true };
+    },
+  };
+  assert.throws(
+    () => updateOpenAtLogin(cannotDisableApp, 'Wattelier.exe', false),
+    /Windows n’a pas désactivé.*Paramètres.*Démarrage/,
+  );
 });
 
 test('les icônes Electron utilisent les ressources externes dans le paquet', () => {

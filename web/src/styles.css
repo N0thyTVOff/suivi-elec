@@ -932,6 +932,20 @@ form.settings textarea,
   user-select: none;
 }
 
+.toggle-button {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+
+.toggle-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .toggle .track {
   position: relative;
   width: 42px;

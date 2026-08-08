@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.4](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.4.3...wattelier-v2.4.4) (2026-08-08)
+
+
+### Corrections
+
+* **desktop:** evite la boucle Tailscale ([#45](https://github.com/N0thyTVOff/wattelier/issues/45)) ([7ce8262](https://github.com/N0thyTVOff/wattelier/commit/7ce8262c9ca29ca3b04c7d4cdd81896b26a06793))
+
 ## [2.4.3](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.4.2...wattelier-v2.4.3) (2026-08-08)
 
 

@@ -74,6 +74,7 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :UILaunchScreen' "$APP_PLIST" >/dev/null
           /usr/libexec/PlistBuddy -c 'Print :UISupportedInterfaceOrientations' "$APP_PLIST" >/dev/null
           /usr/libexec/PlistBuddy -c 'Print :UISupportedInterfaceOrientations~ipad' "$APP_PLIST" >/dev/null
+          test -d "$RUNNER_TEMP/Wattelier.xcarchive/Products/Applications/Wattelier.app/PlugIns/WattelierWidgets.appex"
       - name: Signer dans le cloud et envoyer à App Store Connect
         env:
           EXPORT_OPTIONS: ${{ runner.temp }}/ExportOptions.plist

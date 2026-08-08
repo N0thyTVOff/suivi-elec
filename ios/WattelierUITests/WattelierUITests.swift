@@ -25,4 +25,20 @@ final class WattelierUITests: XCTestCase {
         app.tabBars.buttons["Appareils"].tap()
         XCTAssertTrue(app.navigationBars["Appareils"].waitForExistence(timeout: 5))
     }
+
+    func testTabsReuseLiveDataWithoutBlockingLoader() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitesting-demo"]
+        app.launch()
+
+        app.tabBars.buttons["Direct"].tap()
+        XCTAssertTrue(app.navigationBars["Temps réel"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts["Connexion au direct…"].exists)
+        XCTAssertTrue(app.staticTexts["684 W"].waitForExistence(timeout: 5))
+
+        app.tabBars.buttons["Accueil"].tap()
+        app.tabBars.buttons["Direct"].tap()
+        XCTAssertTrue(app.staticTexts["684 W"].exists)
+        XCTAssertFalse(app.staticTexts["Connexion au direct…"].exists)
+    }
 }

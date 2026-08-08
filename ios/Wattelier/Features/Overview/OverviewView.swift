@@ -2,24 +2,24 @@ import Charts
 import SwiftUI
 
 struct OverviewView: View {
-    let repository: any WattelierRepository
-    @State private var summary: Summary?
-    @State private var daily: [DailyEnergy] = []
-    @State private var error: String?
-    @State private var loading = true
+    @ObservedObject var store: DashboardStore
+
+    private var summary: Summary { store.summary ?? Self.placeholderSummary }
+    private var daily: [DailyEnergy] { store.histories[30] ?? [] }
 
     var body: some View {
         ZStack {
             SignalBackdrop()
-            Group {
-                if loading { LoadingSignalView(label: "Lecture de votre énergie…") }
-                else if let error { ErrorSignalView(message: error) { Task { await load() } } }
-                else if let summary { content(summary) }
-            }
+            content(summary)
+                .redacted(reason: store.summary == nil ? .placeholder : [])
         }
         .navigationTitle("Aujourd’hui")
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { ServerBadge(repository: repository) } }
-        .task { await load() }
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { ServerBadge(repository: store.repository) } }
+        .safeAreaInset(edge: .top) {
+            if let error = store.error(for: .summary) {
+                RefreshIssueBanner(message: error) { Task { await store.refreshSummary() } }
+            }
+        }
     }
 
     private func content(_ summary: Summary) -> some View {
@@ -101,17 +101,29 @@ struct OverviewView: View {
             }
             .padding()
         }
-        .refreshable { await load() }
+        .refreshable { await store.refreshAll() }
     }
 
-    private func load() async {
-        loading = summary == nil
-        error = nil
-        do {
-            async let nextSummary = repository.summary()
-            async let nextDaily = repository.daily(days: 10)
-            (summary, daily) = try await (nextSummary, nextDaily)
-        } catch { self.error = error.localizedDescription }
-        loading = false
-    }
+    private static let placeholderSummary = Summary(
+        nowW: 888,
+        devices: [
+            DeviceReading(
+                deviceID: "placeholder",
+                name: "Appareil Wattelier",
+                watts: 120,
+                volts: nil,
+                amps: nil,
+                ts: Date().timeIntervalSince1970 * 1000,
+                online: 1,
+                switchState: nil,
+                todayKwh: 0.75
+            )
+        ],
+        todayPlugsKwh: 2.45,
+        todayHouseKwh: 8.50,
+        yesterdayPlugsKwh: nil,
+        yesterdayHouseKwh: nil,
+        yesterdayHouseFrom: nil,
+        prices: PriceInfo(kwh: 0.20, subMonth: nil, kva: 6)
+    )
 }

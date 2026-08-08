@@ -93,6 +93,28 @@ struct ErrorSignalView: View {
     }
 }
 
+struct RefreshIssueBanner: View {
+    let message: String
+    let retry: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "wifi.exclamationmark")
+                .foregroundStyle(WattelierTheme.warning)
+                .accessibilityHidden(true)
+            Text(message)
+                .font(.caption)
+                .lineLimit(2)
+            Spacer(minLength: 4)
+            Button("Réessayer", action: retry)
+                .font(.caption.weight(.semibold))
+                .frame(minHeight: 44)
+        }
+        .padding(.horizontal, 16)
+        .background(.bar)
+    }
+}
+
 struct FreshnessLabel: View {
     let timestampMilliseconds: Double
     var body: some View {

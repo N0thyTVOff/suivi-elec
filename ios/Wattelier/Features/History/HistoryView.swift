@@ -2,20 +2,15 @@ import Charts
 import SwiftUI
 
 struct HistoryView: View {
-    let repository: any WattelierRepository
+    @ObservedObject var store: DashboardStore
     @State private var days = 30
-    @State private var rows: [DailyEnergy] = []
-    @State private var loading = true
-    @State private var error: String?
+
+    private var rows: [DailyEnergy] { store.histories[days] ?? [] }
 
     var body: some View {
         ZStack {
             SignalBackdrop()
-            Group {
-                if loading { LoadingSignalView(label: "Chargement de l’historique…") }
-                else if let error { ErrorSignalView(message: error) { Task { await load() } } }
-                else { content }
-            }
+            content
         }
         .navigationTitle("Historique")
         .toolbar {
@@ -25,7 +20,14 @@ struct HistoryView: View {
                 }.pickerStyle(.segmented).frame(maxWidth: 220)
             }
         }
-        .task(id: days) { await load() }
+        .task(id: days) {
+            if store.histories[days] == nil { await store.refreshHistory(days: days) }
+        }
+        .safeAreaInset(edge: .top) {
+            if let error = store.error(for: .history(days)) {
+                RefreshIssueBanner(message: error) { Task { await store.refreshHistory(days: days) } }
+            }
+        }
     }
 
     private var content: some View {
@@ -66,14 +68,6 @@ struct HistoryView: View {
             }
             .padding()
         }
-        .refreshable { await load() }
-    }
-
-    private func load() async {
-        loading = rows.isEmpty
-        do { rows = try await repository.daily(days: days); error = nil }
-        catch { self.error = error.localizedDescription }
-        loading = false
+        .refreshable { await store.refreshHistory(days: days) }
     }
 }
-

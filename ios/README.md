@@ -12,6 +12,8 @@ dans un cloud tiers : elle se connecte directement à l’URL HTTPS contenue dan
 - suivi de facturation et réglages clair, sombre ou système ;
 - mode démonstration hors ligne pour découvrir l’app et pour App Review ;
 - interface iPhone par onglets et interface iPad par barre latérale.
+- cache de session et rafraîchissement silencieux afin de conserver les pages instantanées ;
+- widgets petit, moyen et grand pour la puissance des prises et les consommations du jour.
 
 ## Développement
 
@@ -26,6 +28,9 @@ open Wattelier.xcodeproj
 
 La cible minimale est iOS 17. Le bundle est `com.n0thytvoff.Wattelier`. La CI GitHub compile et
 teste l’app sur `macos-26` avec Xcode 26 ; aucun Mac local n’est nécessaire pour cette validation.
+
+L’application et l’extension WidgetKit partagent uniquement le dernier instantané d’affichage via
+le groupe `group.com.n0thytvoff.Wattelier`. Aucun jeton de connexion n’est copié dans ce groupe.
 
 ## Livraison sans Mac
 

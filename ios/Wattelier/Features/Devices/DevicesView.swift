@@ -1,20 +1,16 @@
 import SwiftUI
 
 struct DevicesView: View {
-    let repository: any WattelierRepository
-    @State private var devices: [ServerDevice] = []
-    @State private var loading = true
-    @State private var error: String?
+    @ObservedObject var store: DashboardStore
     @State private var changing: Set<String> = []
     @State private var confirmation: String?
+    @State private var commandError: String?
 
     var body: some View {
         ZStack {
             SignalBackdrop()
             Group {
-                if loading { LoadingSignalView(label: "Recherche des appareils…") }
-                else if let error { ErrorSignalView(message: error) { Task { await load() } } }
-                else if devices.isEmpty {
+                if store.devices.isEmpty {
                     EmptySignalView(
                         symbol: "powerplug", title: "Aucun appareil",
                         detail: "Configurez eWeLink ou Omajin sur le serveur pour retrouver vos prises ici."
@@ -23,7 +19,14 @@ struct DevicesView: View {
             }
         }
         .navigationTitle("Appareils")
-        .task { await load() }
+        .safeAreaInset(edge: .top) {
+            if let error = commandError ?? store.error(for: .devices) {
+                RefreshIssueBanner(message: error) {
+                    commandError = nil
+                    Task { await store.refreshDevices() }
+                }
+            }
+        }
         .alert("Commande envoyée", isPresented: Binding(
             get: { confirmation != nil }, set: { if !$0 { confirmation = nil } }
         )) { Button("OK", role: .cancel) {} } message: { Text(confirmation ?? "") }
@@ -31,7 +34,7 @@ struct DevicesView: View {
 
     private var list: some View {
         List {
-            ForEach($devices) { $device in
+            ForEach(store.devices) { device in
                 Section {
                     HStack(spacing: 14) {
                         Image(systemName: device.online == 1 ? "powerplug.fill" : "powerplug")
@@ -64,30 +67,18 @@ struct DevicesView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .refreshable { await load() }
-    }
-
-    private func load() async {
-        loading = devices.isEmpty
-        do { devices = try await repository.devices(); error = nil }
-        catch { self.error = error.localizedDescription }
-        loading = false
+        .refreshable { await store.refreshDevices() }
     }
 
     private func setSwitch(device: ServerDevice, on: Bool) async {
         changing.insert(device.id)
         do {
-            let state = try await repository.setSwitch(deviceID: device.id, on: on)
-            if let index = devices.firstIndex(where: { $0.id == device.id }) {
-                let current = devices[index]
-                devices[index] = ServerDevice(
-                    id: current.id, name: current.name, room: current.room, model: current.model,
-                    online: current.online, source: current.source, lastSeen: current.lastSeen, switchState: state
-                )
-            }
+            let state = try await store.setSwitch(deviceID: device.id, on: on)
             confirmation = "\(device.name) est maintenant \(state == "on" ? "allumée" : "éteinte")."
-        } catch { self.error = error.localizedDescription }
+            commandError = nil
+        } catch {
+            if !error.isExpectedCancellation { commandError = error.localizedDescription }
+        }
         changing.remove(device.id)
     }
 }
-

@@ -17,6 +17,11 @@ Navigateur React / future app mobile
                                       ├── eWeLink (HTTPS/WebSocket)
                                       ├── Sonoff LAN (mDNS/HTTP chiffré)
                                       └── Tuya Cloud (HTTPS signé)
+
+Application iOS
+  ├── DashboardStore ──> cache de session et rafraîchissements silencieux
+  ├── vues SwiftUI ──> même état conservé entre les onglets
+  └── WidgetKit ──> dernier instantané sans secret dans l’App Group partagé
 ```
 
 `desktop/main.js` propose le choix serveur/client au premier lancement des éditions installée et
@@ -54,3 +59,6 @@ Les nouvelles installations exigent un jeton pour toute l'API. Le serveur écout
 réseau local. Tailscale Serve fournit facultativement une origine HTTPS privée au tailnet ; une autre
 forme d'exposition distante exige toujours TLS ou un VPN. Le HTML statique et l'état
 minimal d'onboarding sont publics, mais aucune donnée énergétique n'est accessible sans jeton.
+Le client iOS ignore les annulations normales de tâches et conserve les dernières données valides
+lors d’un échec de rafraîchissement. Les widgets ne reçoivent ni URL privée ni jeton : uniquement
+un instantané de présentation via `group.com.n0thytvoff.Wattelier`.

@@ -56,6 +56,10 @@ final class AppSession: ObservableObject {
             repository = live
             state = .connected
         } catch {
+            if error.isExpectedCancellation {
+                state = .disconnected
+                return
+            }
             repository = nil
             state = .disconnected
             connectionError = error.localizedDescription
@@ -79,6 +83,7 @@ final class AppSession: ObservableObject {
 
     func disconnect() {
         KeychainStore.delete()
+        WidgetSnapshotStore.clear()
         repository = nil
         connectionError = nil
         state = .disconnected

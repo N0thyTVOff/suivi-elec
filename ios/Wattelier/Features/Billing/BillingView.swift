@@ -2,22 +2,22 @@ import Charts
 import SwiftUI
 
 struct BillingView: View {
-    let repository: any WattelierRepository
-    @State private var billing: Billing?
-    @State private var loading = true
-    @State private var error: String?
+    @ObservedObject var store: DashboardStore
+
+    private var billing: Billing { store.billing ?? Self.placeholderBilling }
 
     var body: some View {
         ZStack {
             SignalBackdrop()
-            Group {
-                if loading { LoadingSignalView(label: "Calcul de la projection…") }
-                else if let error { ErrorSignalView(message: error) { Task { await load() } } }
-                else if let billing { content(billing) }
-            }
+            content(billing)
+                .redacted(reason: store.billing == nil ? .placeholder : [])
         }
         .navigationTitle("Facturation")
-        .task { await load() }
+        .safeAreaInset(edge: .top) {
+            if let error = store.error(for: .billing) {
+                RefreshIssueBanner(message: error) { Task { await store.refreshBilling() } }
+            }
+        }
     }
 
     private func content(_ billing: Billing) -> some View {
@@ -69,13 +69,28 @@ struct BillingView: View {
             }
             .padding()
         }
-        .refreshable { await load() }
+        .refreshable { await store.refreshBilling() }
     }
 
-    private func load() async {
-        loading = billing == nil
-        do { billing = try await repository.billing(); error = nil }
-        catch { self.error = error.localizedDescription }
-        loading = false
-    }
+    private static let placeholderBilling = Billing(
+        start: "2026-01-01",
+        end: "2026-12-31",
+        today: "2026-08-08",
+        totalDays: 365,
+        elapsedDays: 220,
+        daysMeasured: 210,
+        coveragePct: 96,
+        installments: [Installment(date: "2026-09-05", amount: 90)],
+        paidToDate: 720,
+        plannedTotal: 1080,
+        nextInstallment: Installment(date: "2026-09-05", amount: 90),
+        avgDayKwh: 11,
+        kwhMeasured: 2300,
+        realCostToDate: 650,
+        balance: 70,
+        projectedYearKwh: 4000,
+        projectedTotal: 960,
+        projectedRegul: -120,
+        idealMonthly: 80
+    )
 }

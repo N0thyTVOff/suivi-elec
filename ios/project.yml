@@ -19,6 +19,9 @@ targets:
       - path: Wattelier
         excludes:
           - '**/*.md'
+      - path: Shared
+    dependencies:
+      - target: WattelierWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.n0thytvoff.Wattelier
@@ -28,11 +31,27 @@ targets:
         TARGETED_DEVICE_FAMILY: '1,2'
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Wattelier/Support/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Wattelier/Support/Wattelier.entitlements
     scheme:
       testTargets:
         - WattelierTests
         - WattelierUITests
       gatherCoverageData: true
+  WattelierWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: WattelierWidgets
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.n0thytvoff.Wattelier.Widgets
+        PRODUCT_NAME: WattelierWidgets
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: WattelierWidgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WattelierWidgets/WattelierWidgets.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
   WattelierTests:
     type: bundle.unit-test
     platform: iOS

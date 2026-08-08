@@ -66,6 +66,8 @@ jobs:
           DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
           MARKETING_VERSION='${{ inputs.version }}'
           CURRENT_PROJECT_VERSION='${{ inputs.build }}'
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
       - name: Signer dans le cloud et envoyer à App Store Connect
         env:
           EXPORT_OPTIONS: ${{ runner.temp }}/ExportOptions.plist

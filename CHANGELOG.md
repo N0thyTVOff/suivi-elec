@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.3](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.4.2...wattelier-v2.4.3) (2026-08-08)
+
+
+### Corrections
+
+* **desktop:** activation HTTPS Tailscale fiable ([#43](https://github.com/N0thyTVOff/wattelier/issues/43)) ([e23a92c](https://github.com/N0thyTVOff/wattelier/commit/e23a92c3f4235d95eac5a9f4eac5a2baf82f4138))
+
 ## [2.4.2](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.4.1...wattelier-v2.4.2) (2026-08-08)
 
 

@@ -115,6 +115,28 @@ struct Installment: Codable, Identifiable, Equatable {
 
 struct SwitchResponse: Decodable { let state: String }
 
+struct MeterIndexList: Codable, Equatable {
+    let entries: [MeterIndexEntry]
+    let manualDays: [ManualEnergyDay]
+}
+
+struct MeterIndexEntry: Codable, Identifiable, Equatable {
+    let date: String
+    let indexKwh: Double
+    var id: String { date }
+
+    enum CodingKeys: String, CodingKey {
+        case date
+        case indexKwh = "index_kwh"
+    }
+}
+
+struct ManualEnergyDay: Codable, Identifiable, Equatable {
+    let date: String
+    let wh: Double
+    var id: String { date }
+}
+
 enum ISO8601Day {
     private static let formatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -131,4 +153,3 @@ extension Double {
     var kwhText: String { formatted(.number.precision(.fractionLength(2))) + " kWh" }
     var euroText: String { formatted(.currency(code: "EUR")) }
 }
-

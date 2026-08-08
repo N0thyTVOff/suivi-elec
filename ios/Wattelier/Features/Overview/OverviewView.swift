@@ -3,6 +3,7 @@ import SwiftUI
 
 struct OverviewView: View {
     @ObservedObject var store: DashboardStore
+    @State private var showsManualReading = false
 
     private var summary: Summary { store.summary ?? Self.placeholderSummary }
     private var daily: [DailyEnergy] { store.histories[30] ?? [] }
@@ -14,7 +15,15 @@ struct OverviewView: View {
                 .redacted(reason: store.summary == nil ? .placeholder : [])
         }
         .navigationTitle("Aujourd’hui")
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { ServerBadge(repository: store.repository) } }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button { showsManualReading = true } label: {
+                    Label("Ajouter un relevé", systemImage: "plus.circle.fill")
+                }
+                ServerBadge(repository: store.repository)
+            }
+        }
+        .sheet(isPresented: $showsManualReading) { ManualReadingSheet(store: store) }
         .safeAreaInset(edge: .top) {
             if let error = store.error(for: .summary) {
                 RefreshIssueBanner(message: error) { Task { await store.refreshSummary() } }
@@ -25,6 +34,16 @@ struct OverviewView: View {
     private func content(_ summary: Summary) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 20) {
+                if let refreshed = store.lastLiveRefresh {
+                    Label {
+                        Text("Actualisé à \(refreshed.formatted(date: .omitted, time: .standard))")
+                    } icon: {
+                        Image(systemName: "dot.radiowaves.left.and.right")
+                    }
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(WattelierTheme.success)
+                    .accessibilityLabel("Données actualisées en direct à \(refreshed.formatted(date: .omitted, time: .standard))")
+                }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 12)], spacing: 12) {
                     SignalMetric(
                         title: "Puissance des prises", value: summary.nowW.wattsText,
@@ -100,6 +119,7 @@ struct OverviewView: View {
                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
             .padding()
+            .animation(.snappy, value: summary)
         }
         .refreshable { await store.refreshAll() }
     }

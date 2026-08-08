@@ -14,9 +14,9 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var billing: Billing?
     @Published private(set) var errors: [Area: String] = [:]
     @Published private(set) var refreshing = false
+    @Published private(set) var lastLiveRefresh: Date?
 
     let repository: any WattelierRepository
-    private var slowRefreshTick = 0
 
     init(repository: any WattelierRepository) {
         self.repository = repository
@@ -25,22 +25,17 @@ final class DashboardStore: ObservableObject {
     func run() async {
         await refreshAll()
         if ProcessInfo.processInfo.arguments.contains("-uitesting-demo") { return }
-        do {
-            while !Task.isCancelled {
-                try await Task.sleep(for: .seconds(10))
-                await refreshLiveData()
-                slowRefreshTick += 1
-                if slowRefreshTick.isMultiple(of: 6) {
-                    async let history: Void = refreshHistory(days: 30)
-                    async let devices: Void = refreshDevices()
-                    async let billing: Void = refreshBilling()
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.poll(every: .seconds(3)) { await self.refreshSummary() } }
+            group.addTask { await self.poll(every: .seconds(5)) { await self.refreshReadings() } }
+            group.addTask {
+                await self.poll(every: .seconds(60)) {
+                    async let history: Void = self.refreshHistory(days: 30)
+                    async let devices: Void = self.refreshDevices()
+                    async let billing: Void = self.refreshBilling()
                     _ = await (history, devices, billing)
                 }
             }
-        } catch is CancellationError {
-            // Quitter la session ou placer l’app en veille est un arrêt normal.
-        } catch {
-            // Task.sleep ne produit actuellement que CancellationError.
         }
     }
 
@@ -66,6 +61,7 @@ final class DashboardStore: ObservableObject {
             let next = try await repository.summary()
             guard !Task.isCancelled else { return }
             summary = next
+            lastLiveRefresh = Date()
             errors[.summary] = nil
             saveWidgetSnapshot(next)
         } catch {
@@ -137,11 +133,33 @@ final class DashboardStore: ObservableObject {
         return state
     }
 
+    func addMeterIndex(date: String, indexKwh: Double) async throws {
+        _ = try await repository.addMeterIndex(date: date, indexKwh: indexKwh)
+        guard !Task.isCancelled else { throw CancellationError() }
+        async let summary: Void = refreshSummary()
+        async let history: Void = refreshHistory(days: 30)
+        async let billing: Void = refreshBilling()
+        _ = await (summary, history, billing)
+    }
+
     func error(for area: Area) -> String? { errors[area] }
 
     private func record(_ error: Error, for area: Area) {
         guard !error.isExpectedCancellation else { return }
         errors[area] = error.localizedDescription
+    }
+
+    private func poll(every interval: Duration, operation: @escaping @MainActor () async -> Void) async {
+        do {
+            while !Task.isCancelled {
+                try await Task.sleep(for: interval)
+                await operation()
+            }
+        } catch is CancellationError {
+            // Quitter la session ou placer l’app en veille est un arrêt normal.
+        } catch {
+            // Task.sleep ne produit actuellement que CancellationError.
+        }
     }
 
     private func saveWidgetSnapshot(_ summary: Summary) {

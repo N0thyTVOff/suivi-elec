@@ -35,6 +35,27 @@ final class DashboardStoreTests: XCTestCase {
         XCTAssertEqual(decoded, snapshot)
         XCTAssertNotEqual(decoded.todayHouseKwh, decoded.todayPlugsKwh)
     }
+
+    func testWidgetSnapshotIsSharedThroughAnAtomicFile() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        WidgetSnapshotStore.save(.placeholder, to: directory)
+
+        XCTAssertEqual(WidgetSnapshotStore.load(from: directory), .placeholder)
+    }
+
+    func testManualMeterReadingIsForwardedAndRefreshesDashboard() async throws {
+        let repository = ControllableRepository()
+        let store = DashboardStore(repository: repository)
+
+        try await store.addMeterIndex(date: "2026-08-08", indexKwh: 7_101)
+
+        XCTAssertEqual(repository.lastMeterEntry, MeterIndexEntry(date: "2026-08-08", indexKwh: 7_101))
+        XCTAssertNotNil(store.summary)
+        XCTAssertNotNil(store.histories[30])
+    }
 }
 
 private final class ControllableRepository: WattelierRepository, @unchecked Sendable {
@@ -42,6 +63,7 @@ private final class ControllableRepository: WattelierRepository, @unchecked Send
     let isDemo = false
     var summaryError: Error?
     var readingsError: Error?
+    var lastMeterEntry: MeterIndexEntry?
 
     func validate() async throws {}
 
@@ -69,5 +91,11 @@ private final class ControllableRepository: WattelierRepository, @unchecked Send
 
     func setSwitch(deviceID: String, on: Bool) async throws -> String {
         on ? "on" : "off"
+    }
+
+    func addMeterIndex(date: String, indexKwh: Double) async throws -> MeterIndexList {
+        let entry = MeterIndexEntry(date: date, indexKwh: indexKwh)
+        lastMeterEntry = entry
+        return MeterIndexList(entries: [entry], manualDays: [])
     }
 }

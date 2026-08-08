@@ -4,6 +4,7 @@ import SwiftUI
 struct HistoryView: View {
     @ObservedObject var store: DashboardStore
     @State private var days = 30
+    @State private var showsManualReading = false
 
     private var rows: [DailyEnergy] { store.histories[days] ?? [] }
 
@@ -14,12 +15,18 @@ struct HistoryView: View {
         }
         .navigationTitle("Historique")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { showsManualReading = true } label: {
+                    Label("Ajouter un relevé", systemImage: "plus.circle.fill")
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Picker("Période", selection: $days) {
                     Text("7 j").tag(7); Text("30 j").tag(30); Text("90 j").tag(90)
                 }.pickerStyle(.segmented).frame(maxWidth: 220)
             }
         }
+        .sheet(isPresented: $showsManualReading) { ManualReadingSheet(store: store) }
         .task(id: days) {
             if store.histories[days] == nil { await store.refreshHistory(days: days) }
         }

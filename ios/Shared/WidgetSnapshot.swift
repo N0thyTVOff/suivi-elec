@@ -33,19 +33,37 @@ struct WidgetSnapshot: Codable, Equatable {
 
 enum WidgetSnapshotStore {
     static let appGroup = "group.com.n0thytvoff.Wattelier"
-    private static let key = "widgetSnapshot"
+    private static let filename = "widget-snapshot.json"
+
+    private static var containerURL: URL? {
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+    }
 
     static func load() -> WidgetSnapshot? {
-        guard let data = UserDefaults(suiteName: appGroup)?.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
+        load(from: containerURL)
     }
 
     static func save(_ snapshot: WidgetSnapshot) {
-        guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        UserDefaults(suiteName: appGroup)?.set(data, forKey: key)
+        save(snapshot, to: containerURL)
     }
 
     static func clear() {
-        UserDefaults(suiteName: appGroup)?.removeObject(forKey: key)
+        guard let url = snapshotURL(in: containerURL) else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    static func load(from directory: URL?) -> WidgetSnapshot? {
+        guard let url = snapshotURL(in: directory), let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
+    }
+
+    static func save(_ snapshot: WidgetSnapshot, to directory: URL?) {
+        guard let url = snapshotURL(in: directory), let data = try? JSONEncoder().encode(snapshot) else { return }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
+    private static func snapshotURL(in directory: URL?) -> URL? {
+        directory?.appendingPathComponent(filename, isDirectory: false)
     }
 }

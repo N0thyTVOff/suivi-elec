@@ -10,6 +10,7 @@ protocol WattelierRepository: AnyObject, Sendable {
     func devices() async throws -> [ServerDevice]
     func billing() async throws -> Billing
     func setSwitch(deviceID: String, on: Bool) async throws -> String
+    func addMeterIndex(date: String, indexKwh: Double) async throws -> MeterIndexList
 }
 
 final class LiveRepository: WattelierRepository, @unchecked Sendable {
@@ -31,6 +32,15 @@ final class LiveRepository: WattelierRepository, @unchecked Sendable {
     }
     func devices() async throws -> [ServerDevice] { try await client.request("devices") }
     func billing() async throws -> Billing { try await client.request("billing") }
+
+    func addMeterIndex(date: String, indexKwh: Double) async throws -> MeterIndexList {
+        struct Request: Encodable {
+            let date: String
+            let index_kwh: Double
+        }
+        let body = try JSONEncoder().encode(Request(date: date, index_kwh: indexKwh))
+        return try await client.request("meter-index", method: "POST", body: body)
+    }
 
     func setSwitch(deviceID: String, on: Bool) async throws -> String {
         let body = try JSONEncoder().encode(["on": on])
@@ -123,6 +133,10 @@ final class DemoRepository: WattelierRepository, @unchecked Sendable {
 
     func setSwitch(deviceID: String, on: Bool) async throws -> String { on ? "on" : "off" }
 
+    func addMeterIndex(date: String, indexKwh: Double) async throws -> MeterIndexList {
+        MeterIndexList(entries: [MeterIndexEntry(date: date, indexKwh: indexKwh)], manualDays: [])
+    }
+
     private func now(_ offsetSeconds: Double) -> Double {
         (Date().timeIntervalSince1970 + offsetSeconds) * 1000
     }
@@ -134,4 +148,3 @@ final class DemoRepository: WattelierRepository, @unchecked Sendable {
         return formatter
     }()
 }
-

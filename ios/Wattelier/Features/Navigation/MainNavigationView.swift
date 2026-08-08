@@ -37,35 +37,37 @@ struct MainNavigationView: View {
     }
 
     var body: some View {
-        if horizontalSizeClass == .regular {
-            NavigationSplitView {
-                List(AppSection.allCases) { section in
-                    Button {
-                        selection = section
-                    } label: {
-                        Label(section.label, systemImage: section.symbol)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+        Group {
+            if horizontalSizeClass == .regular {
+                NavigationSplitView {
+                    List(AppSection.allCases) { section in
+                        Button {
+                            selection = section
+                        } label: {
+                            Label(section.label, systemImage: section.symbol)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(selection == section ? WattelierTheme.accent : .primary)
+                        .accessibilityAddTraits(selection == section ? .isSelected : [])
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(selection == section ? WattelierTheme.accent : .primary)
-                    .accessibilityAddTraits(selection == section ? .isSelected : [])
+                    .navigationTitle("Wattelier")
+                    .safeAreaInset(edge: .bottom) {
+                        ServerBadge(repository: repository).padding()
+                    }
+                } detail: {
+                    NavigationStack { destination(selection) }
                 }
-                .navigationTitle("Wattelier")
-                .safeAreaInset(edge: .bottom) {
-                    ServerBadge(repository: repository).padding()
+            } else {
+                TabView(selection: $selection) {
+                    tab(.overview) { OverviewView(store: store) }
+                    tab(.realtime) { RealTimeView(store: store) }
+                    tab(.history) { HistoryView(store: store) }
+                    tab(.devices) { DevicesView(store: store) }
+                    NavigationStack { MoreView(repository: repository, store: store) }
+                        .tabItem { Label("Plus", systemImage: "ellipsis") }
+                        .tag(AppSection.settings)
                 }
-            } detail: {
-                NavigationStack { destination(selection) }
-            }
-        } else {
-            TabView(selection: $selection) {
-                tab(.overview) { OverviewView(store: store) }
-                tab(.realtime) { RealTimeView(store: store) }
-                tab(.history) { HistoryView(store: store) }
-                tab(.devices) { DevicesView(store: store) }
-                NavigationStack { MoreView(repository: repository, store: store) }
-                    .tabItem { Label("Plus", systemImage: "ellipsis") }
-                    .tag(AppSection.settings)
             }
         }
         .task { await store.run() }

@@ -34,33 +34,19 @@ jobs:
       - name: Vérifier les secrets requis
         env:
           API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
-          CERTIFICATE_P12: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_P12 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
         run: |
           test -n "$APPLE_TEAM_ID"
           test -n "$API_KEY_ID"
           test -n "$API_ISSUER_ID"
           test -n "$API_KEY_P8"
-          test -n "$CERTIFICATE_P12"
-          test -n "$CERTIFICATE_PASSWORD"
       - name: Installer XcodeGen
         run: brew install xcodegen
-      - name: Installer la clé App Store Connect et le certificat
+      - name: Installer la clé App Store Connect
         env:
           API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
-          CERTIFICATE_P12: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_P12 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p "$HOME/.appstoreconnect/private_keys"
-          printf '%s' "$API_KEY_P8" > "$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
-          printf '%s' "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/distribution.p12"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/wattelier.keychain-db"
-          security set-keychain-settings -lut 21600 "$RUNNER_TEMP/wattelier.keychain-db"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/wattelier.keychain-db"
-          security import "$RUNNER_TEMP/distribution.p12" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$RUNNER_TEMP/wattelier.keychain-db"
-          security list-keychain -d user -s "$RUNNER_TEMP/wattelier.keychain-db"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/wattelier.keychain-db"
+          printf '%s' "$API_KEY_P8" > "$RUNNER_TEMP/AuthKey_${API_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey_${API_KEY_ID}.p8"
       - name: Générer le projet Xcode
         working-directory: ios
         run: xcodegen generate
@@ -74,39 +60,25 @@ jobs:
           -destination 'generic/platform=iOS'
           -archivePath "$RUNNER_TEMP/Wattelier.xcarchive"
           -allowProvisioningUpdates
-          -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
+          -authenticationKeyPath "$RUNNER_TEMP/AuthKey_${API_KEY_ID}.p8"
           -authenticationKeyID "$API_KEY_ID"
           -authenticationKeyIssuerID "$API_ISSUER_ID"
           DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
           MARKETING_VERSION='${{ inputs.version }}'
           CURRENT_PROJECT_VERSION='${{ inputs.build }}'
-      - name: Exporter l’IPA
+      - name: Signer dans le cloud et envoyer à App Store Connect
         env:
           EXPORT_OPTIONS: ${{ runner.temp }}/ExportOptions.plist
         run: |
           /usr/libexec/PlistBuddy -c 'Add :method string app-store-connect' "$EXPORT_OPTIONS"
-          /usr/libexec/PlistBuddy -c 'Add :destination string export' "$EXPORT_OPTIONS"
+          /usr/libexec/PlistBuddy -c 'Add :destination string upload' "$EXPORT_OPTIONS"
           /usr/libexec/PlistBuddy -c 'Add :signingStyle string automatic' "$EXPORT_OPTIONS"
           /usr/libexec/PlistBuddy -c "Add :teamID string $APPLE_TEAM_ID" "$EXPORT_OPTIONS"
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/Wattelier.xcarchive" \
-            -exportPath "$RUNNER_TEMP/export" \
+            -exportPath "$RUNNER_TEMP/upload" \
             -exportOptionsPlist "$EXPORT_OPTIONS" \
             -allowProvisioningUpdates \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8" \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey_${API_KEY_ID}.p8" \
             -authenticationKeyID "$API_KEY_ID" \
             -authenticationKeyIssuerID "$API_ISSUER_ID"
-      - name: Envoyer à App Store Connect
-        run: >-
-          xcrun altool --upload-app
-          --type ios
-          --file "$RUNNER_TEMP/export/Wattelier.ipa"
-          --apiKey "$API_KEY_ID"
-          --apiIssuer "$API_ISSUER_ID"
-      - name: Conserver l’IPA signée
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: Wattelier-iOS-${{ inputs.version }}-${{ inputs.build }}
-          path: ${{ runner.temp }}/export/Wattelier.ipa
-          retention-days: 14
-          if-no-files-found: error

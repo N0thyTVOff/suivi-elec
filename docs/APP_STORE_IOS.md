@@ -16,30 +16,23 @@ Membership et utilisez cette valeur pour le secret `APPLE_TEAM_ID`.
 ## 1. Créer une clé App Store Connect d’équipe
 
 Dans App Store Connect > Utilisateurs et accès > Intégrations > API App Store Connect, créez une
-clé **d’équipe** avec le rôle App Manager, puis téléchargez une seule fois le fichier `.p8`. Une clé
-individuelle ne peut pas gérer le provisioning requis par cette chaîne.
+clé **d’équipe** avec le rôle Admin, puis téléchargez une seule fois le fichier `.p8`. Une clé
+individuelle ne peut pas gérer le provisioning requis par cette chaîne. Le titulaire du compte et
+les administrateurs peuvent utiliser la signature Apple gérée dans le cloud sans certificat local.
 
 ## 2. Ajouter les secrets GitHub
 
 Dans GitHub > Settings > Environments, créez l’environnement `app-store`. Ajoutez-y :
 
-| Secret                                    | Contenu                                                |
-| ----------------------------------------- | ------------------------------------------------------ |
-| `APPLE_TEAM_ID`                           | Team ID Apple Developer                                |
-| `APP_STORE_CONNECT_API_KEY_ID`            | identifiant court de la clé API                        |
-| `APP_STORE_CONNECT_ISSUER_ID`             | Issuer ID de la clé API                                |
-| `APP_STORE_CONNECT_API_KEY_P8`            | contenu complet du fichier `AuthKey_….p8`              |
-| `APPLE_DISTRIBUTION_CERTIFICATE_P12`      | certificat Apple Distribution `.p12`, encodé en Base64 |
-| `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` | mot de passe du `.p12`                                 |
+| Secret                         | Contenu                                   |
+| ------------------------------ | ----------------------------------------- |
+| `APPLE_TEAM_ID`                | Team ID Apple Developer                   |
+| `APP_STORE_CONNECT_API_KEY_ID` | identifiant court de la clé API           |
+| `APP_STORE_CONNECT_ISSUER_ID`  | Issuer ID de la clé API                   |
+| `APP_STORE_CONNECT_API_KEY_P8` | contenu complet du fichier `AuthKey_….p8` |
 
-Sous PowerShell, encodez le certificat sans afficher son contenu :
-
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes('AppleDistribution.p12')) | Set-Clipboard
-```
-
-Le certificat doit inclure sa clé privée. Les secrets sont injectés uniquement sur le runner macOS
-éphémère et ne sont jamais ajoutés à l’artefact ni au dépôt.
+La clé est injectée uniquement sur le runner macOS éphémère et n’est jamais ajoutée à l’artefact ni
+au dépôt. Aucun certificat `.p12` n’est requis : Xcode utilise la signature Apple gérée dans le cloud.
 
 ## 3. Envoyer un build à TestFlight
 
@@ -47,10 +40,9 @@ Dans Actions > **iOS · TestFlight** > Run workflow, saisissez la version et un 
 jamais utilisé. Le workflow :
 
 1. génère le projet avec XcodeGen ;
-2. utilise la signature automatique Apple avec le certificat et la clé API ;
-3. archive et exporte `Wattelier.ipa` ;
-4. transmet l’IPA à App Store Connect ;
-5. conserve l’IPA signée 14 jours comme artefact privé de l’action.
+2. utilise la signature automatique Apple dans le cloud avec la clé API ;
+3. archive Wattelier ;
+4. signe et transmet directement le build à App Store Connect.
 
 La première exécution peut prendre plusieurs minutes avant que le build apparaisse dans TestFlight.
 Apple effectue ensuite son traitement et peut demander de répondre à la question sur le chiffrement ;

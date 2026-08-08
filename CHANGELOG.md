@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.4.0](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.3.0...wattelier-v2.4.0) (2026-08-08)
+
+
+### Fonctionnalités
+
+* **desktop:** ajoute la réinitialisation de Wattelier ([#37](https://github.com/N0thyTVOff/wattelier/issues/37)) ([55b3952](https://github.com/N0thyTVOff/wattelier/commit/55b3952fb03b7daab253fcf0d91c19faf32cadf3)), closes [#33](https://github.com/N0thyTVOff/wattelier/issues/33)
+
+
+### Corrections
+
+* **desktop:** guide l’activation de Tailscale Serve ([#35](https://github.com/N0thyTVOff/wattelier/issues/35)) ([a57299d](https://github.com/N0thyTVOff/wattelier/commit/a57299d74a4cd4b45f88ef7365502330f0d76b63)), closes [#32](https://github.com/N0thyTVOff/wattelier/issues/32)
+* **desktop:** réparer le démarrage avec Windows ([#38](https://github.com/N0thyTVOff/wattelier/issues/38)) ([2fe58f6](https://github.com/N0thyTVOff/wattelier/commit/2fe58f6c3156ff772f976464468844cd828fa8e2)), closes [#34](https://github.com/N0thyTVOff/wattelier/issues/34)
+
 ## [2.3.0](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.2.0...wattelier-v2.3.0) (2026-08-07)
 
 

@@ -24,6 +24,14 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Découvrir Wattelier") {
+                Button {
+                    session.presentWelcome()
+                } label: {
+                    Label("Revoir la présentation", systemImage: "rectangle.stack.fill")
+                }
+            }
+
             Section("Confidentialité") {
                 Label("Aucun compte Wattelier", systemImage: "person.crop.circle.badge.checkmark")
                 Label("Aucun suivi publicitaire", systemImage: "eye.slash.fill")
@@ -55,4 +63,3 @@ struct SettingsView: View {
         }
     }
 }
-

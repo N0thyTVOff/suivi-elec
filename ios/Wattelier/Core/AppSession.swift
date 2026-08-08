@@ -11,7 +11,9 @@ final class AppSession: ObservableObject {
     @Published private(set) var state: State = .disconnected
     @Published private(set) var repository: (any WattelierRepository)?
     @Published private(set) var connectionError: String?
+    @Published private(set) var isPresentingWelcome = false
     @AppStorage("appearance") private var appearanceRaw = AppAppearance.system.rawValue
+    @AppStorage("welcomeCompleted") private var welcomeCompleted = false
 
     var appearance: AppAppearance {
         get { AppAppearance(rawValue: appearanceRaw) ?? .system }
@@ -27,11 +29,17 @@ final class AppSession: ObservableObject {
     }
 
     init() {
-        if ProcessInfo.processInfo.arguments.contains("-uitesting-demo") {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-uitesting-welcome") {
+            isPresentingWelcome = true
+            return
+        }
+        if arguments.contains("-uitesting-demo") {
             repository = DemoRepository()
             state = .connected
             return
         }
+        isPresentingWelcome = !welcomeCompleted
         if let token = KeychainStore.load() {
             Task { await connect(token: token, persist: false) }
         }
@@ -58,6 +66,15 @@ final class AppSession: ObservableObject {
         connectionError = nil
         repository = DemoRepository()
         state = .connected
+    }
+
+    func finishWelcome() {
+        welcomeCompleted = true
+        isPresentingWelcome = false
+    }
+
+    func presentWelcome() {
+        isPresentingWelcome = true
     }
 
     func disconnect() {

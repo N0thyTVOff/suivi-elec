@@ -126,7 +126,8 @@ private struct WelcomeFeature: View {
                 .font(.title2.weight(.semibold))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(tint)
-                .frame(width: 36, minHeight: 44, alignment: .top)
+                .frame(width: 36)
+                .frame(minHeight: 44, alignment: .top)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 5) {

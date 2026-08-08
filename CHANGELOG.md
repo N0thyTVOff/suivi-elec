@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.1](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.4.0...wattelier-v2.4.1) (2026-08-08)
+
+
+### Corrections
+
+* **desktop:** corriger le nœud d’autorisation Tailscale ([#39](https://github.com/N0thyTVOff/wattelier/issues/39)) ([cc6713b](https://github.com/N0thyTVOff/wattelier/commit/cc6713bc7be1c9bf8c6caf2c1b45970d43e24f6b))
+
 ## [2.4.0](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.3.0...wattelier-v2.4.0) (2026-08-08)
 
 

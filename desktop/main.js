@@ -123,7 +123,18 @@ function registerDesktopBridge() {
     if (!isTrustedSender(event) || applicationMode !== 'server') {
       throw new Error('Origine non autorisée');
     }
-    return enableTailscaleServe(PORT);
+    const result = await enableTailscaleServe(PORT);
+    if (result.approvalUrl) {
+      const approvalUrl = new URL(result.approvalUrl);
+      if (approvalUrl.origin !== 'https://login.tailscale.com') {
+        throw new Error('Adresse d’autorisation Tailscale invalide.');
+      }
+      await shell.openExternal(approvalUrl.href);
+      const publicResult = { ...result };
+      delete publicResult.approvalUrl;
+      return publicResult;
+    }
+    return result;
   });
 }
 

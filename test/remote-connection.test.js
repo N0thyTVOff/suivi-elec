@@ -151,6 +151,65 @@ test('le module Tailscale signale une installation absente sans exposer la comma
   );
 });
 
+test('le module Tailscale détecte l’autorisation Serve requise sans attendre 30 secondes', async () => {
+  /** @type {object[]} */
+  const optionsSeen = [];
+  /** @param {string} _executable @param {string[]} args @param {object} options */
+  const execute = async (_executable, args, options) => {
+    optionsSeen.push(options);
+    if (args[0] === 'status') {
+      return {
+        stdout: JSON.stringify({
+          BackendState: 'Running',
+          Self: { DNSName: 'pc.maison.ts.net.' },
+        }),
+      };
+    }
+    throw Object.assign(new Error('expiration'), {
+      code: 'ETIMEDOUT',
+      stdout:
+        'Serve is not enabled on your tailnet.\nTo enable, visit:\nhttps://login.tailscale.com/f/serve?node=abc_123',
+      stderr: '',
+    });
+  };
+
+  const result = await enableTailscaleServe(3017, execute);
+  assert.deepEqual(result, {
+    installed: true,
+    connected: true,
+    dnsName: 'pc.maison.ts.net',
+    serverUrl: 'https://pc.maison.ts.net',
+    enabled: false,
+    needsApproval: true,
+    approvalUrl: 'https://login.tailscale.com/f/serve?node=abc_123',
+  });
+  assert.deepEqual(optionsSeen.at(-1), {
+    timeout: 5_000,
+    windowsHide: true,
+    maxBuffer: 1_000_000,
+  });
+});
+
+test('le module Tailscale ne transforme plus une erreur Serve en erreur d’installation', async () => {
+  let calls = 0;
+  /** @param {string} _executable @param {string[]} args */
+  const execute = async (_executable, args) => {
+    calls += 1;
+    if (args[0] === 'status') {
+      return {
+        stdout: JSON.stringify({
+          BackendState: 'Running',
+          Self: { DNSName: 'pc.maison.ts.net.' },
+        }),
+      };
+    }
+    throw Object.assign(new Error('refusé'), { code: 1, stderr: 'permission denied' });
+  };
+
+  await assert.rejects(enableTailscaleServe(3017, execute), /Serve n'a pas pu être activé/);
+  assert.equal(calls, 2, 'une erreur réelle ne doit pas relancer les autres chemins candidats');
+});
+
 test('le preload de connexion distante ne propose que valider ou annuler', () => {
   const preload = fs.readFileSync(
     new URL('../desktop/connect-preload.cjs', import.meta.url),

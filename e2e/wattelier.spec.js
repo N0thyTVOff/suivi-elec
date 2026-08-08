@@ -5,6 +5,7 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
   await page.addInitScript(() => {
     let automaticUpdates = false;
+    let tailscaleAttempts = 0;
     window.wattelierDesktop = {
       getRuntimeInfo: async () => ({
         version: '2.1.2',
@@ -26,13 +27,17 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
         dnsName: 'pc.maison.ts.net',
         serverUrl: 'https://pc.maison.ts.net',
       }),
-      enableTailscale: async () => ({
-        installed: true,
-        connected: true,
-        enabled: true,
-        dnsName: 'pc.maison.ts.net',
-        serverUrl: 'https://pc.maison.ts.net',
-      }),
+      enableTailscale: async () => {
+        tailscaleAttempts += 1;
+        return {
+          installed: true,
+          connected: true,
+          enabled: tailscaleAttempts > 1,
+          needsApproval: tailscaleAttempts === 1,
+          dnsName: 'pc.maison.ts.net',
+          serverUrl: 'https://pc.maison.ts.net',
+        };
+      },
     };
   });
   await page.goto('/');
@@ -81,9 +86,13 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   await expect(
     page.getByRole('heading', { name: 'Sécurité du serveur et application mobile' }),
   ).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Configurer automatiquement Tailscale' }),
-  ).toBeVisible();
+  const tailscaleButton = page.getByRole('button', {
+    name: 'Configurer automatiquement Tailscale',
+  });
+  await tailscaleButton.click();
+  await expect(page.getByText(/Autorisez Tailscale Serve/)).toBeVisible();
+  await tailscaleButton.click();
+  await expect(page.getByText('Serveur publié sur https://pc.maison.ts.net')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Prises Omajin OSP-FR-01 (Tuya)' })).toBeVisible();
   await expect(page.getByLabel('Access ID Tuya')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Application Windows' })).toBeVisible();

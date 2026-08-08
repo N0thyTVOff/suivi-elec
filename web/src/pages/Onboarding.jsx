@@ -71,6 +71,12 @@ export default function Onboarding({ tariffs, onReady }) {
     setError('');
     try {
       const result = await window.wattelierDesktop.enableTailscale();
+      if (result.needsApproval) {
+        setError(
+          'Autorisez Tailscale Serve dans la page qui vient de s’ouvrir, puis cliquez à nouveau sur le bouton.',
+        );
+        return;
+      }
       setForm((current) => ({ ...current, public_server_url: result.serverUrl }));
     } catch (err) {
       setError(err.message);

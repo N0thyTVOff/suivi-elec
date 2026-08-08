@@ -78,6 +78,13 @@ export default function Settings({ status }) {
     setTailscaleError('');
     try {
       const result = await window.wattelierDesktop.enableTailscale();
+      if (result.needsApproval) {
+        setTailscale(result);
+        setTailscaleError(
+          'Autorisez Tailscale Serve dans la page qui vient de s’ouvrir, puis cliquez à nouveau sur le bouton.',
+        );
+        return;
+      }
       const next = await post('settings', { public_server_url: result.serverUrl });
       setSettings(next);
       setTailscale(result);

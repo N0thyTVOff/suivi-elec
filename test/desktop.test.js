@@ -192,6 +192,8 @@ test('le bureau sépare le serveur local du client HTTPS distant', () => {
   assert.match(main, /setPermissionRequestHandler/);
   assert.match(main, /Changer de serveur distant/);
   assert.match(main, /clearDesktopConnection/);
+  assert.match(main, /approvalUrl\.origin !== 'https:\/\/login\.tailscale\.com'/);
+  assert.match(main, /shell\.openExternal\(approvalUrl\.href\)/);
   assert.match(connectionPage, /jeton de connexion/i);
   assert.match(connectionPage, /Content-Security-Policy/);
 });

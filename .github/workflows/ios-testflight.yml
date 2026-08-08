@@ -68,6 +68,12 @@ jobs:
           CURRENT_PROJECT_VERSION='${{ inputs.build }}'
           CODE_SIGNING_ALLOWED=NO
           CODE_SIGNING_REQUIRED=NO
+      - name: Vérifier le manifeste archivé
+        run: |
+          APP_PLIST="$RUNNER_TEMP/Wattelier.xcarchive/Products/Applications/Wattelier.app/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :UILaunchScreen' "$APP_PLIST" >/dev/null
+          /usr/libexec/PlistBuddy -c 'Print :UISupportedInterfaceOrientations' "$APP_PLIST" >/dev/null
+          /usr/libexec/PlistBuddy -c 'Print :UISupportedInterfaceOrientations~ipad' "$APP_PLIST" >/dev/null
       - name: Signer dans le cloud et envoyer à App Store Connect
         env:
           EXPORT_OPTIONS: ${{ runner.temp }}/ExportOptions.plist

@@ -19,8 +19,6 @@ targets:
       - path: Wattelier
         excludes:
           - '**/*.md'
-    info:
-      path: Wattelier/Support/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.n0thytvoff.Wattelier
@@ -29,6 +27,7 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: '1,2'
         GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Wattelier/Support/Info.plist
     scheme:
       testTargets:
         - WattelierTests

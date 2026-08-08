@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.5.0](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.4.4...wattelier-v2.5.0) (2026-08-08)
+
+
+### Fonctionnalités
+
+* **ios:** ajouter l’application native Wattelier ([#47](https://github.com/N0thyTVOff/wattelier/issues/47)) ([6666ab2](https://github.com/N0thyTVOff/wattelier/commit/6666ab248b533170cad2e9939c5d6310739f77e0))
+* **ios:** ajouter les cartes de bienvenue ([#50](https://github.com/N0thyTVOff/wattelier/issues/50)) ([63223ff](https://github.com/N0thyTVOff/wattelier/commit/63223ffd2bde700b002e225aec5b689692c54c55))
+* **ios:** fluidifier les données et ajouter les widgets ([#52](https://github.com/N0thyTVOff/wattelier/issues/52)) ([dfa47d1](https://github.com/N0thyTVOff/wattelier/commit/dfa47d1264b3b9243cc300be3cbf3dacac517983))
+
+
+### Corrections
+
+* **ios:** actualiser l’accueil, les relevés et les widgets ([#53](https://github.com/N0thyTVOff/wattelier/issues/53)) ([098c280](https://github.com/N0thyTVOff/wattelier/commit/098c2803e2f12c4162ea9848bfb6e6eac3dece93))
+* **ios:** signer TestFlight sans appareil physique ([#49](https://github.com/N0thyTVOff/wattelier/issues/49)) ([836fba7](https://github.com/N0thyTVOff/wattelier/commit/836fba7bdac99ab1902ce0cab8c3ecdae2006422))
+* **ios:** utiliser une fiche de bienvenue native ([#51](https://github.com/N0thyTVOff/wattelier/issues/51)) ([5373022](https://github.com/N0thyTVOff/wattelier/commit/5373022731e19664ae6a194d314c54e5bdee17dd))
+
 ## [2.4.4](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.4.3...wattelier-v2.4.4) (2026-08-08)
 
 

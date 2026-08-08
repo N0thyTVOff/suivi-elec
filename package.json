@@ -1,7 +1,7 @@
 {
   "name": "wattelier",
   "productName": "Wattelier",
-  "version": "2.4.4",
+  "version": "2.5.0",
   "description": "Votre énergie, enfin claire — suivi local Linky, Sonoff/eWeLink et Omajin/Tuya",
   "private": true,
   "license": "AGPL-3.0-only",

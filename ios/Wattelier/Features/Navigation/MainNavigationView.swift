@@ -33,8 +33,16 @@ struct MainNavigationView: View {
     var body: some View {
         if horizontalSizeClass == .regular {
             NavigationSplitView {
-                List(AppSection.allCases, selection: $selection) { section in
-                    Label(section.label, systemImage: section.symbol).tag(section)
+                List(AppSection.allCases) { section in
+                    Button {
+                        selection = section
+                    } label: {
+                        Label(section.label, systemImage: section.symbol)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(selection == section ? WattelierTheme.accent : .primary)
+                    .accessibilityAddTraits(selection == section ? .isSelected : [])
                 }
                 .navigationTitle("Wattelier")
                 .safeAreaInset(edge: .bottom) {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.2](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.4.1...wattelier-v2.4.2) (2026-08-08)
+
+
+### Corrections
+
+* **auth:** fiabiliser les jetons de connexion distante ([#41](https://github.com/N0thyTVOff/wattelier/issues/41)) ([4d7a049](https://github.com/N0thyTVOff/wattelier/commit/4d7a049e376e28127056a99a2695c2ae685cf27e))
+
 ## [2.4.1](https://github.com/N0thyTVOff/wattelier/compare/wattelier-v2.4.0...wattelier-v2.4.1) (2026-08-08)
 
 

@@ -24,6 +24,7 @@ final class DashboardStore: ObservableObject {
 
     func run() async {
         await refreshAll()
+        if ProcessInfo.processInfo.arguments.contains("-uitesting-demo") { return }
         do {
             while !Task.isCancelled {
                 try await Task.sleep(for: .seconds(10))

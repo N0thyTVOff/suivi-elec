@@ -6,12 +6,11 @@ final class WattelierUITests: XCTestCase {
         app.launchArguments = ["-uitesting-welcome"]
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["Votre énergie, enfin claire"].waitForExistence(timeout: 8))
-        app.buttons["Suivant"].tap()
-        XCTAssertTrue(app.staticTexts["Le direct, sans détour"].waitForExistence(timeout: 5))
-        app.buttons["Suivant"].tap()
-        XCTAssertTrue(app.staticTexts["Vos données restent chez vous"].waitForExistence(timeout: 5))
-        app.buttons["Se connecter à mon serveur"].tap()
+        XCTAssertTrue(app.staticTexts["Bienvenue dans Wattelier"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["Des mesures qui restent justes"].exists)
+        XCTAssertTrue(app.staticTexts["Le direct et les commandes"].exists)
+        XCTAssertTrue(app.staticTexts["Vos données restent chez vous"].exists)
+        app.buttons["Continuer"].tap()
         XCTAssertTrue(app.staticTexts["Accéder à mon serveur"].waitForExistence(timeout: 5))
     }
 

@@ -13,7 +13,7 @@ coûts, les analyses et la mensualisation. Les données restent dans une base SQ
 machine.
 
 > Wattelier ne remplace ni un dispositif de sécurité électrique ni la facture du fournisseur. Il
-> n’existe aucun service Wattelier hébergé et aucune application iOS officielle à ce jour.
+> n’existe aucun service Wattelier hébergé : les applications se connectent à votre propre serveur.
 
 ## Installer Wattelier sur Windows
 
@@ -41,10 +41,11 @@ Wattelier peut importer l’ancien fichier `data/elec.db`, puis configure les so
 - vues par jour, appareil et période, heatmap, veilles, pics et projections ;
 - tarifs Base, HP/HC, Tempo, EJP ou personnalisés, budget et échéancier ;
 - connecteurs Linky/eWeLink/Omajin activables indépendamment et mode de démonstration ;
-- export CSV, journal d’événements et API HTTP `/api/*` stable pour le futur client iOS ;
+- export CSV, journal d’événements et API HTTP `/api/*` partagée avec le client iOS ;
 - serveur accessible sur le réseau local, protégé par un jeton autonome pour les clients distants ;
 - accès HTTPS privé facultatif et guidé avec Tailscale Serve ;
 - application Windows avec zone de notification et collecte en arrière-plan.
+- application SwiftUI native pour iPhone et iPad, compilée et livrée par GitHub Actions.
 - réinitialisation guidée avec sauvegarde récupérable des données précédentes.
 
 La puissance instantanée affichée est celle des prises mesurées. Wattelier ne présente jamais
@@ -102,6 +103,10 @@ npm run test:e2e       # après : npx playwright install chromium
 npm run desktop:dir   # paquet Windows non compressé
 npm run desktop:build # installateur NSIS + portable
 ```
+
+Le client Apple se trouve dans [`ios/`](ios/README.md). Sa CI utilise Xcode 26 sur un runner macOS
+GitHub ; la procédure TestFlight sans Mac local est détaillée dans
+[`docs/APP_STORE_IOS.md`](docs/APP_STORE_IOS.md).
 
 La CI agrège les contrôles dans le check obligatoire `CI`. L’architecture et les conventions sont
 décrites dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) et

@@ -1,0 +1,61 @@
+name: iOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  test:
+    name: SwiftUI · build et tests
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Vérifier Xcode 26
+        run: |
+          xcodebuild -version
+          test "$(xcodebuild -version | awk '/Xcode/{print int($2)}')" -ge 26
+      - name: Installer XcodeGen
+        run: brew install xcodegen
+      - name: Générer le projet Xcode
+        working-directory: ios
+        run: xcodegen generate
+      - name: Choisir un simulateur iPhone
+        id: simulator
+        shell: bash
+        run: |
+          DEVICE_ID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for runtime in d.values() for x in runtime if x["name"].startswith("iPhone")))')"
+          echo "device_id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
+      - name: Compiler et tester
+        working-directory: ios
+        run: >-
+          xcodebuild test
+          -project Wattelier.xcodeproj
+          -scheme Wattelier
+          -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}'
+          -resultBundlePath TestResults.xcresult
+          CODE_SIGNING_ALLOWED=NO
+      - name: Publier les résultats en cas d’échec
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ios-test-results
+          path: ios/TestResults.xcresult
+          retention-days: 7
+          if-no-files-found: ignore

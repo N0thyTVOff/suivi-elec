@@ -51,6 +51,7 @@ export default function Onboarding({ tariffs, onReady }) {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [tailscaleBusy, setTailscaleBusy] = useState(false);
+  const [tailscaleNeedsHttps, setTailscaleNeedsHttps] = useState(false);
   const set = (key) => (e) => setForm((v) => ({ ...v, [key]: e.target.value }));
 
   const finish = async () => {
@@ -70,12 +71,14 @@ export default function Onboarding({ tariffs, onReady }) {
 
   const enableTailscale = async () => {
     setTailscaleBusy(true);
+    setTailscaleNeedsHttps(false);
     setError('');
     try {
       const result = await window.wattelierDesktop.enableTailscale();
       if (result.needsApproval) {
+        setTailscaleNeedsHttps(true);
         setError(
-          'Autorisez Tailscale Serve dans la page qui vient de s’ouvrir, puis cliquez à nouveau sur le bouton.',
+          'Dans Tailscale, ouvrez « HTTPS Certificates », cliquez sur « Enable HTTPS », puis revenez ici et réessayez. Si l’option n’apparaît pas, connectez-vous avec le compte administrateur du réseau Tailscale.',
         );
         return;
       }
@@ -354,7 +357,11 @@ export default function Onboarding({ tariffs, onReady }) {
                   onClick={enableTailscale}
                   disabled={tailscaleBusy}
                 >
-                  {tailscaleBusy ? 'Configuration…' : 'Configurer automatiquement Tailscale'}
+                  {tailscaleBusy
+                    ? 'Configuration…'
+                    : tailscaleNeedsHttps
+                      ? 'Réessayer après l’activation HTTPS'
+                      : 'Configurer automatiquement Tailscale'}
                 </button>
               )}
               <label style={{ display: 'block', marginTop: 12 }}>
@@ -371,7 +378,11 @@ export default function Onboarding({ tariffs, onReady }) {
                 réglages.
               </small>
             </div>
-            {error && <p className="form-error">{error}</p>}
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            )}
             <div className="onboarding-actions">
               <button className="btn secondary" onClick={() => setStep(1)}>
                 Retour

@@ -100,8 +100,11 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
     name: 'Configurer automatiquement Tailscale',
   });
   await tailscaleButton.click();
-  await expect(page.getByText(/Autorisez Tailscale Serve/)).toBeVisible();
-  await tailscaleButton.click();
+  await expect(page.getByRole('alert')).toContainText('HTTPS Certificates');
+  await expect(
+    page.getByRole('button', { name: 'Réessayer après l’activation HTTPS' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Réessayer après l’activation HTTPS' }).click();
   await expect(page.getByText('Serveur publié sur https://pc.maison.ts.net')).toBeVisible();
   await page.getByRole('button', { name: 'Générer ou renouveler le jeton de connexion' }).click();
   await expect(page.locator('.token-box code')).toHaveText(/^wtl1_/);

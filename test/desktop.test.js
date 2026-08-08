@@ -286,8 +286,10 @@ test('le bureau sépare le serveur local du client HTTPS distant', () => {
   assert.match(main, /Changer de serveur distant/);
   assert.match(main, /clearDesktopConnection/);
   assert.match(main, /connectionTokenFromInput\(input\.token, input\.serverUrl\)/);
-  assert.match(main, /approvalUrl\.origin !== 'https:\/\/login\.tailscale\.com'/);
-  assert.match(main, /shell\.openExternal\(approvalUrl\.href\)/);
+  assert.match(main, /TAILSCALE_DNS_ADMIN_URL = 'https:\/\/login\.tailscale\.com\/admin\/dns'/);
+  assert.match(main, /if \(result\.needsApproval\)/);
+  assert.match(main, /shell\.openExternal\(TAILSCALE_DNS_ADMIN_URL\)/);
+  assert.doesNotMatch(main, /shell\.openExternal\(approvalUrl\.href\)/);
   assert.match(connectionPage, /jeton de connexion/i);
   assert.match(connectionPage, /id="server-url"/);
   assert.match(connectionPage, /jeton d’accès/i);

@@ -13,6 +13,7 @@ export default function Settings({ status }) {
   const [openAtLoginError, setOpenAtLoginError] = useState('');
   const [tailscale, setTailscale] = useState(null);
   const [tailscaleBusy, setTailscaleBusy] = useState(false);
+  const [tailscaleNeedsHttps, setTailscaleNeedsHttps] = useState(false);
   const [tailscaleError, setTailscaleError] = useState('');
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('');
@@ -95,13 +96,15 @@ export default function Settings({ status }) {
 
   const enableTailscale = async () => {
     setTailscaleBusy(true);
+    setTailscaleNeedsHttps(false);
     setTailscaleError('');
     try {
       const result = await window.wattelierDesktop.enableTailscale();
       if (result.needsApproval) {
         setTailscale(result);
+        setTailscaleNeedsHttps(true);
         setTailscaleError(
-          'Autorisez Tailscale Serve dans la page qui vient de s’ouvrir, puis cliquez à nouveau sur le bouton.',
+          'Dans Tailscale, ouvrez « HTTPS Certificates », cliquez sur « Enable HTTPS », puis revenez ici et réessayez. Si l’option n’apparaît pas, connectez-vous avec le compte administrateur du réseau Tailscale.',
         );
         return;
       }
@@ -792,7 +795,11 @@ export default function Settings({ status }) {
                 onClick={enableTailscale}
                 disabled={tailscaleBusy}
               >
-                {tailscaleBusy ? 'Configuration…' : 'Configurer automatiquement Tailscale'}
+                {tailscaleBusy
+                  ? 'Configuration…'
+                  : tailscaleNeedsHttps
+                    ? 'Réessayer après l’activation HTTPS'
+                    : 'Configurer automatiquement Tailscale'}
               </button>
             )}
             {!tailscale.installed && (
@@ -805,7 +812,11 @@ export default function Settings({ status }) {
                 Installer Tailscale
               </a>
             )}
-            {tailscaleError && <p className="form-error">{tailscaleError}</p>}
+            {tailscaleError && (
+              <p className="form-error" role="alert">
+                {tailscaleError}
+              </p>
+            )}
           </div>
         )}
         {status?.server?.authEnabled === false && (

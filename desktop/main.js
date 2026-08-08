@@ -31,6 +31,7 @@ import { connectionTokenFromInput, parseConnectionToken } from '../server/connec
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3017;
 const LOCAL_URL = `http://127.0.0.1:${PORT}`;
+const TAILSCALE_DNS_ADMIN_URL = 'https://login.tailscale.com/admin/dns';
 const portableDirectory = process.env.PORTABLE_EXECUTABLE_DIR || '';
 const hiddenLaunch = process.argv.includes('--hidden');
 const hasInstanceLock = requestSingleInstance(app);
@@ -150,12 +151,8 @@ function registerDesktopBridge() {
       throw new Error('Origine non autorisée');
     }
     const result = await enableTailscaleServe(PORT);
-    if (result.approvalUrl) {
-      const approvalUrl = new URL(result.approvalUrl);
-      if (approvalUrl.origin !== 'https://login.tailscale.com') {
-        throw new Error('Adresse d’autorisation Tailscale invalide.');
-      }
-      await shell.openExternal(approvalUrl.href);
+    if (result.needsApproval) {
+      await shell.openExternal(TAILSCALE_DNS_ADMIN_URL);
       const publicResult = { ...result };
       delete publicResult.approvalUrl;
       return publicResult;

@@ -6,6 +6,7 @@ export default function Settings({ status }) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newServerToken, setNewServerToken] = useState('');
+  const [serverTokenError, setServerTokenError] = useState('');
   const [desktopInfo, setDesktopInfo] = useState(null);
   const [openAtLoginBusy, setOpenAtLoginBusy] = useState(false);
   const [openAtLoginMessage, setOpenAtLoginMessage] = useState('');
@@ -73,9 +74,23 @@ export default function Settings({ status }) {
   };
 
   const rotateServerToken = async () => {
-    await post('settings', { public_server_url: settings.public_server_url });
-    const result = await post('auth/rotate', {});
-    setNewServerToken(result.connectionToken || result.accessToken);
+    setServerTokenError('');
+    setNewServerToken('');
+    if (!String(settings.public_server_url || '').trim()) {
+      setServerTokenError(
+        'Configurez d’abord une adresse HTTPS ou Tailscale pour créer un jeton de connexion distant.',
+      );
+      return;
+    }
+    try {
+      await post('settings', { public_server_url: settings.public_server_url });
+      const result = await post('auth/rotate', {});
+      if (!result.connectionToken)
+        throw new Error('Le serveur n’a pas créé de jeton de connexion.');
+      setNewServerToken(result.connectionToken);
+    } catch (error) {
+      setServerTokenError(error.message || 'Impossible de renouveler le jeton de connexion.');
+    }
   };
 
   const enableTailscale = async () => {
@@ -802,6 +817,7 @@ export default function Settings({ status }) {
         <button className="btn" type="button" onClick={rotateServerToken}>
           Générer ou renouveler le jeton de connexion
         </button>
+        {serverTokenError && <p className="form-error">{serverTokenError}</p>}
         {newServerToken && (
           <div className="token-box" style={{ marginTop: 14 }}>
             <code>{newServerToken}</code>

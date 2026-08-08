@@ -49,6 +49,16 @@ export function parseConnectionToken(value) {
   return { serverUrl: normalizeRemoteServerUrl(payload.u), accessToken: String(payload.t) };
 }
 
+/** @param {unknown} value @param {unknown} serverUrl */
+export function connectionTokenFromInput(value, serverUrl = '') {
+  const token = String(value).trim();
+  if (token.startsWith(PREFIX)) {
+    const connection = parseConnectionToken(token);
+    return createConnectionToken(connection.serverUrl, connection.accessToken);
+  }
+  return createConnectionToken(serverUrl, token);
+}
+
 /** @param {unknown} serverUrl @param {unknown} accessToken */
 export function optionalConnectionToken(serverUrl, accessToken) {
   if (!String(serverUrl || '').trim()) return null;

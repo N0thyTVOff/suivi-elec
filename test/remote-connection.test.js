@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import {
   accessTokenFromInput,
+  connectionTokenFromInput,
   createConnectionToken,
   normalizeRemoteServerUrl,
   optionalConnectionToken,
@@ -30,6 +31,24 @@ test('le jeton de connexion autonome contient une origine HTTPS et le secret ser
   assert.equal(accessTokenFromInput(ACCESS_TOKEN), ACCESS_TOKEN);
   assert.equal(optionalConnectionToken('', ACCESS_TOKEN), null);
   assert.equal(normalizeRemoteServerUrl(' https://PC.MAISON.ts.net '), 'https://pc.maison.ts.net');
+});
+
+test('la connexion distante accepte un jeton d’accès accompagné de son adresse HTTPS', () => {
+  const fromAccessToken = connectionTokenFromInput('  ' + ACCESS_TOKEN, 'https://pc.maison.ts.net');
+  assert.deepEqual(parseConnectionToken(fromAccessToken), {
+    serverUrl: 'https://pc.maison.ts.net',
+    accessToken: ACCESS_TOKEN,
+  });
+
+  const combined = createConnectionToken('https://serveur.fiable.ts.net', ACCESS_TOKEN);
+  assert.deepEqual(
+    parseConnectionToken(connectionTokenFromInput(combined, 'https://adresse-ignoree.ts.net')),
+    {
+      serverUrl: 'https://serveur.fiable.ts.net',
+      accessToken: ACCESS_TOKEN,
+    },
+  );
+  assert.throws(() => connectionTokenFromInput(ACCESS_TOKEN), /adresse du serveur invalide/);
 });
 
 test('le jeton distant refuse HTTP, les URL ambiguës et les secrets invalides', () => {
@@ -217,5 +236,6 @@ test('le preload de connexion distante ne propose que valider ou annuler', () =>
   );
   const exposedMethods = [...preload.matchAll(/^\s{2}([a-zA-Z]+):/gm)].map((match) => match[1]);
   assert.deepEqual(exposedMethods, ['submit', 'cancel']);
+  assert.match(preload, /serverUrl/);
   assert.doesNotMatch(preload, /require\(['"](?:node:)?(?:fs|child_process)/);
 });

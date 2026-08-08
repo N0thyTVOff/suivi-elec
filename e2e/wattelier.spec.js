@@ -54,7 +54,9 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   await page.getByRole('button', { name: 'Continuer' }).click();
   await expect(page.getByLabel('Option tarifaire')).toHaveValue('base');
   await page.getByRole('button', { name: 'Terminer la configuration' }).click();
-  const token = await page.locator('.token-box code').innerText();
+  await expect(page.getByRole('heading', { name: 'Conservez votre jeton d’accès' })).toBeVisible();
+  const initialToken = await page.locator('.token-box code').innerText();
+  expect(initialToken).toMatch(/^se_/);
   await page.getByRole('button', { name: 'Ouvrir Wattelier' }).click();
   await expect(page.getByRole('heading', { name: "Vue d'ensemble" })).toBeVisible();
 
@@ -92,6 +94,8 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   await expect(
     page.getByRole('heading', { name: 'Sécurité du serveur et application mobile' }),
   ).toBeVisible();
+  await page.getByRole('button', { name: 'Générer ou renouveler le jeton de connexion' }).click();
+  await expect(page.getByText(/Configurez d’abord une adresse HTTPS ou Tailscale/)).toBeVisible();
   const tailscaleButton = page.getByRole('button', {
     name: 'Configurer automatiquement Tailscale',
   });
@@ -99,6 +103,9 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   await expect(page.getByText(/Autorisez Tailscale Serve/)).toBeVisible();
   await tailscaleButton.click();
   await expect(page.getByText('Serveur publié sur https://pc.maison.ts.net')).toBeVisible();
+  await page.getByRole('button', { name: 'Générer ou renouveler le jeton de connexion' }).click();
+  await expect(page.locator('.token-box code')).toHaveText(/^wtl1_/);
+  const token = await page.locator('.token-box code').innerText();
   await expect(page.getByRole('heading', { name: 'Prises Omajin OSP-FR-01 (Tuya)' })).toBeVisible();
   await expect(page.getByLabel('Access ID Tuya')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Application Windows' })).toBeVisible();

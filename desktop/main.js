@@ -26,7 +26,7 @@ import { cancelApplicationReset, performPendingReset, requestApplicationReset } 
 import { loginItemOptions, resolveDesktopAssetPath, resolveRuntimePaths } from './runtime-paths.js';
 import { enableTailscaleServe, tailscaleStatus } from './tailscale.js';
 import { createDesktopUpdater } from './updater.js';
-import { parseConnectionToken } from '../server/connection-token.js';
+import { connectionTokenFromInput, parseConnectionToken } from '../server/connection-token.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3017;
@@ -188,9 +188,9 @@ function requestRemoteConnection() {
     const connectWindow = new BrowserWindow({
       title: 'Connexion à Wattelier',
       width: 620,
-      height: 570,
+      height: 690,
       minWidth: 320,
-      minHeight: 520,
+      minHeight: 620,
       backgroundColor: '#090f1f',
       icon: desktopAsset('icon.png'),
       webPreferences: {
@@ -219,9 +219,11 @@ function requestRemoteConnection() {
       if (event.senderFrame?.url !== connectUrl)
         return { ok: false, error: 'Origine non autorisée.' };
       try {
-        const connection = parseConnectionToken(value);
+        const input = value && typeof value === 'object' ? value : { token: value };
+        const connectionToken = connectionTokenFromInput(input.token, input.serverUrl);
+        const connection = parseConnectionToken(connectionToken);
         await validateRemoteConnection(connection);
-        await writeDesktopConnection(runtimePaths.connectionPath, value, safeStorage);
+        await writeDesktopConnection(runtimePaths.connectionPath, connectionToken, safeStorage);
         desktopPreferences = writeDesktopPreferences(runtimePaths.preferencesPath, {
           ...desktopPreferences,
           mode: 'client',

@@ -53,7 +53,8 @@
         margin-top: 22px;
         font-weight: 700;
       }
-      textarea {
+      textarea,
+      input {
         min-height: 112px;
         resize: vertical;
         border: 1px solid #355284;
@@ -65,7 +66,16 @@
           14px ui-monospace,
           monospace;
       }
-      textarea:focus {
+      input {
+        min-height: 44px;
+      }
+      small {
+        color: #8798b8;
+        font-size: 12px;
+        font-weight: 400;
+      }
+      textarea:focus,
+      input:focus {
         outline: 3px solid #2979ff66;
         border-color: #63a4ff;
       }
@@ -104,17 +114,28 @@
       <div class="brand">WATTELIER</div>
       <h1>Accéder à mon serveur</h1>
       <p>
-        Collez le jeton de connexion créé sur votre serveur. Il contient déjà son adresse HTTPS.
+        Collez un jeton de connexion <b>wtl1_…</b>. Avec un jeton d’accès <b>se_…</b>, indiquez
+        aussi l’adresse HTTPS du serveur.
       </p>
       <form id="form">
         <label
-          >Jeton de connexion<textarea
+          >Jeton de connexion ou d’accès<textarea
             id="token"
             autofocus
             required
             autocomplete="off"
             spellcheck="false"
           ></textarea>
+        </label>
+        <label
+          >Adresse HTTPS du serveur
+          <input
+            id="server-url"
+            type="url"
+            autocomplete="url"
+            placeholder="https://mon-pc.mon-tailnet.ts.net"
+          />
+          <small>Requise uniquement si le jeton commence par « se_ ».</small>
         </label>
         <p id="error" role="alert"></p>
         <div class="actions">
@@ -126,6 +147,7 @@
     <script>
       const form = document.querySelector('#form');
       const token = document.querySelector('#token');
+      const serverUrl = document.querySelector('#server-url');
       const error = document.querySelector('#error');
       const submit = document.querySelector('#submit');
       document
@@ -134,8 +156,17 @@
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         error.textContent = '';
+        const tokenValue = token.value.trim();
+        if (tokenValue.startsWith('se_') && !serverUrl.value.trim()) {
+          error.textContent = 'Ajoutez l’adresse HTTPS correspondant à ce jeton d’accès.';
+          serverUrl.focus();
+          return;
+        }
         submit.disabled = true;
-        const result = await window.wattelierConnect.submit(token.value);
+        const result = await window.wattelierConnect.submit({
+          token: tokenValue,
+          serverUrl: serverUrl.value,
+        });
         if (!result.ok) {
           error.textContent = result.error;
           submit.disabled = false;

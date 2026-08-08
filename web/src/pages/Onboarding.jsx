@@ -47,6 +47,7 @@ export default function Onboarding({ tariffs, onReady }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(defaults);
   const [token, setToken] = useState('');
+  const [connectionTokenCreated, setConnectionTokenCreated] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [tailscaleBusy, setTailscaleBusy] = useState(false);
@@ -57,6 +58,7 @@ export default function Onboarding({ tariffs, onReady }) {
     setError('');
     try {
       const result = await post('setup/complete', form);
+      setConnectionTokenCreated(Boolean(result.connectionToken));
       setToken(result.connectionToken || result.accessToken);
       setStep(3);
     } catch (err) {
@@ -383,12 +385,21 @@ export default function Onboarding({ tariffs, onReady }) {
 
         {step === 3 && (
           <>
-            <h1>Conservez votre jeton de connexion</h1>
-            <p>
-              Il protège toutes les données du serveur et sera demandé une seule fois dans
-              l’application distante. S’il commence par « wtl1_ », il contient aussi l’adresse du
-              serveur : une seule valeur suffit.
-            </p>
+            <h1>
+              Conservez votre {connectionTokenCreated ? 'jeton de connexion' : 'jeton d’accès'}
+            </h1>
+            {connectionTokenCreated ? (
+              <p>
+                Ce jeton commence par « wtl1_ » et contient l’adresse HTTPS du serveur : une seule
+                valeur suffit dans l’application distante.
+              </p>
+            ) : (
+              <p>
+                Ce jeton commence par « se_ » et protège l’accès local. Pour l’utiliser dans
+                l’application distante, vous devrez aussi saisir l’adresse HTTPS du serveur, ou
+                générer plus tard un jeton « wtl1_ » dans les réglages.
+              </p>
+            )}
             <div className="token-box">
               <code>{token}</code>
               <button

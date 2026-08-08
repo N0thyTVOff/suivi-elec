@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('wattelierDesktop', {
   checkForUpdates: () => ipcRenderer.invoke('wattelier:check-for-updates'),
   getTailscaleStatus: () => ipcRenderer.invoke('wattelier:tailscale-status'),
   enableTailscale: () => ipcRenderer.invoke('wattelier:tailscale-enable'),
+  resetApplication: () => ipcRenderer.invoke('wattelier:reset-application'),
 });

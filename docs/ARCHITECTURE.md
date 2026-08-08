@@ -28,7 +28,9 @@ l'exécutable. `desktop/updater.js` vérifie les releases GitHub ; l’installat
 une mise à jour, tandis que l’édition portable conserve un remplacement manuel. Le choix
 d’installation automatique réside dans `desktop-preferences.json`, à côté des autres données
 locales. `desktop/tailscale.js` détecte Tailscale et peut activer Tailscale Serve vers le serveur
-local ; cette intégration reste facultative. `server/index.js` expose l'API, le flux SSE et le build statique. `server/db.js`
+local ; cette intégration reste facultative. `desktop/reset.js` enregistre une demande minimale hors
+du dossier de données ; au redémarrage suivant, avant l’ouverture de SQLite et des journaux, ce
+dossier est renommé en sauvegarde datée. `server/index.js` expose l'API, le flux SSE et le build statique. `server/db.js`
 possède le schéma SQLite et les migrations additives. `server/stats.js` contient les agrégations.
 `server/linky.js` gère la synchronisation et le rattrapage. `server/sonoff/` sépare cloud,
 découverte LAN et cryptographie. `server/omajin/` contient le client OpenAPI Tuya signé, la

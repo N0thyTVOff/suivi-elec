@@ -132,6 +132,20 @@ try {
 
   Stop-WattelierOnPort $installedPort
   Stop-TestProcess $installedProcess
+  New-Item -ItemType File -Path (Join-Path $testUserData '.wattelier-reset-request') | Out-Null
+  $installedProcess = Start-Process -FilePath $installedExecutable -ArgumentList '--hidden', "--user-data-dir=$testUserData" -PassThru
+  Confirm-WattelierStaysRunning $installedPort
+  $installedBackup = Get-ChildItem -LiteralPath $testUserData -Directory -Filter 'app-data-backup-*' |
+    Select-Object -First 1
+  if (-not $installedBackup -or -not (Test-Path -LiteralPath (Join-Path $installedBackup.FullName 'elec.db'))) {
+    throw "La réinitialisation installée n'a pas sauvegardé l'ancienne base."
+  }
+  if (Test-Path -LiteralPath (Join-Path $testUserData '.wattelier-reset-request')) {
+    throw "La demande de réinitialisation installée existe encore."
+  }
+
+  Stop-WattelierOnPort $installedPort
+  Stop-TestProcess $installedProcess
   $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
   if ($uninstall.ExitCode -ne 0) { throw "La désinstallation silencieuse a échoué ($($uninstall.ExitCode))." }
   if (Test-Path -LiteralPath $installedExecutable) { throw 'Le programme installé existe encore.' }
@@ -156,8 +170,21 @@ try {
   }
   Stop-WattelierOnPort $portablePort
   Stop-TestProcess $portableProcess
+  New-Item -ItemType File -Path (Join-Path $portableDirectory '.wattelier-reset-request') | Out-Null
+  $portableProcess = Start-Process -FilePath $portablePath -ArgumentList '--hidden' -PassThru
+  Confirm-WattelierStaysRunning $portablePort
+  $portableBackup = Get-ChildItem -LiteralPath $portableDirectory -Directory -Filter 'Wattelier-data-backup-*' |
+    Select-Object -First 1
+  if (-not $portableBackup -or -not (Test-Path -LiteralPath (Join-Path $portableBackup.FullName 'elec.db'))) {
+    throw "La réinitialisation portable n'a pas sauvegardé l'ancienne base."
+  }
+  if (Test-Path -LiteralPath (Join-Path $portableDirectory '.wattelier-reset-request')) {
+    throw "La demande de réinitialisation portable existe encore."
+  }
+  Stop-WattelierOnPort $portablePort
+  Stop-TestProcess $portableProcess
 
-  Write-Host 'Smoke test Windows validé : installation, raccourcis, instance unique, démarrage caché, désinstallation avec conservation des données et portable.'
+  Write-Host 'Smoke test Windows validé : installation, raccourcis, instance unique, réinitialisation avec sauvegarde, démarrage caché, désinstallation avec conservation des données et portable.'
 } finally {
   Stop-WattelierOnPort $installedPort
   Stop-WattelierOnPort $portablePort

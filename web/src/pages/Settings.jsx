@@ -12,6 +12,8 @@ export default function Settings({ status }) {
   const [tailscaleError, setTailscaleError] = useState('');
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState('');
 
   useEffect(() => {
     api('settings')
@@ -125,6 +127,18 @@ export default function Settings({ status }) {
     }
   };
 
+  const resetApplication = async () => {
+    setResetting(true);
+    setResetError('');
+    try {
+      const result = await window.wattelierDesktop.resetApplication();
+      if (!result.reset) setResetting(false);
+    } catch (error) {
+      setResetError(error.message || 'La réinitialisation a échoué.');
+      setResetting(false);
+    }
+  };
+
   return (
     <>
       {desktopInfo && (
@@ -200,6 +214,27 @@ export default function Settings({ status }) {
             </button>
             {updateMessage && <span className="note">{updateMessage}</span>}
           </div>
+          {desktopInfo.applicationMode === 'server' && (
+            <div className="danger-zone">
+              <div>
+                <b>Réinitialiser Wattelier</b>
+                <p className="note" style={{ margin: '4px 0 0' }}>
+                  Redémarre au premier écran et place la base, les réglages et les journaux actuels
+                  dans un dossier de sauvegarde récupérable. La configuration Tailscale reste
+                  inchangée.
+                </p>
+              </div>
+              <button
+                className="btn danger"
+                type="button"
+                onClick={resetApplication}
+                disabled={resetting}
+              >
+                {resetting ? 'Réinitialisation…' : 'Réinitialiser l’application'}
+              </button>
+              {resetError && <p className="form-error">{resetError}</p>}
+            </div>
+          )}
         </div>
       )}
 

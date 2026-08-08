@@ -21,6 +21,15 @@ La désinstallation retire le programme et les raccourcis, mais ne supprime jama
 pouvez supprimer manuellement `%APPDATA%\Wattelier` seulement après avoir sauvegardé ce que vous
 souhaitez conserver.
 
+Pour recommencer la configuration sans manipuler les dossiers Windows, ouvrez **Réglages →
+Application Windows → Réinitialiser l’application**, ou utilisez **Réinitialiser Wattelier…** dans
+la zone de notification si vous ne pouvez plus vous connecter. Après une confirmation native, Wattelier
+redémarre sur le choix serveur/client et l’onboarding. Les anciennes données ne sont pas détruites :
+elles sont déplacées dans un dossier `app-data-backup-<date>` voisin, dont l’emplacement exact est
+affiché au redémarrage. Cette sauvegarde contient des secrets et l’historique énergétique ;
+conservez-la dans un emplacement privé ou supprimez-la lorsque vous n’en avez plus besoin.
+La configuration Tailscale appartient au tailnet et n’est pas modifiée par cette réinitialisation.
+
 ### Portable
 
 Placez `Wattelier-Portable-vX.Y.Z-x64.exe` dans un dossier où vous avez le droit d’écrire, puis
@@ -31,6 +40,9 @@ Le démarrage automatique est volontairement indisponible en mode portable. Ne l
 copies de Wattelier avec les mêmes appareils : l’application bloque une seconde instance sur le PC.
 La version portable signale les nouvelles releases, mais son remplacement reste manuel afin que le
 dossier `Wattelier-data` demeure sous votre contrôle.
+
+La réinitialisation est également disponible dans l’édition portable. La sauvegarde est alors créée
+à côté de l’exécutable sous le nom `Wattelier-data-backup-<date>`.
 
 ## Choisir le rôle de cette application
 

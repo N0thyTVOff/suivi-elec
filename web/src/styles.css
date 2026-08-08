@@ -854,6 +854,32 @@ form.settings textarea,
   box-shadow: none;
 }
 
+.btn.danger {
+  color: #fff;
+  border-color: color-mix(in srgb, var(--crit) 70%, var(--border));
+  background: var(--crit);
+}
+
+.danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--crit) 35%, var(--border));
+}
+
+.danger-zone > div {
+  flex: 1 1 360px;
+}
+
+.danger-zone .form-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .btn.secondary:hover {
   color: var(--accent-strong);
   border-color: color-mix(in srgb, var(--accent) 34%, var(--border));

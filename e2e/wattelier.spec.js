@@ -38,6 +38,7 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
           serverUrl: 'https://pc.maison.ts.net',
         };
       },
+      resetApplication: async () => ({ reset: false }),
     };
   });
   await page.goto('/');
@@ -96,6 +97,9 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
   await expect(page.getByRole('heading', { name: 'Prises Omajin OSP-FR-01 (Tuya)' })).toBeVisible();
   await expect(page.getByLabel('Access ID Tuya')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Application Windows' })).toBeVisible();
+  const resetButton = page.getByRole('button', { name: 'Réinitialiser l’application' });
+  await resetButton.click();
+  await expect(resetButton).toBeEnabled();
   const automaticUpdates = page.getByRole('switch', {
     name: 'Installer automatiquement les mises à jour',
   });

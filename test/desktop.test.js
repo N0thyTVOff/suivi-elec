@@ -14,6 +14,11 @@ import {
 } from '../desktop/policy.js';
 import { readDesktopPreferences, writeDesktopPreferences } from '../desktop/preferences.js';
 import {
+  cancelApplicationReset,
+  performPendingReset,
+  requestApplicationReset,
+} from '../desktop/reset.js';
+import {
   loginItemOptions,
   resolveDesktopAssetPath,
   resolveRuntimePaths,
@@ -40,6 +45,11 @@ test('résout les chemins installé et portable sans mélanger les données', ()
   assert.equal(path.basename(installed.databasePath), 'elec.db');
   assert.equal(path.basename(installed.preferencesPath), 'desktop-preferences.json');
   assert.equal(path.basename(installed.connectionPath), 'desktop-connection.bin');
+  assert.equal(path.basename(installed.resetRequestPath), '.wattelier-reset-request');
+  assert.equal(
+    path.dirname(installed.resetRequestPath),
+    path.resolve(installed.dataDirectory, '..'),
+  );
 
   const portable = resolveRuntimePaths({
     portableDirectory: path.join('D:', 'Apps', 'Wattelier'),
@@ -49,6 +59,10 @@ test('résout les chemins installé et portable sans mélanger les données', ()
   assert.equal(path.basename(portable.dataDirectory), 'Wattelier-data');
   assert.equal(
     path.dirname(portable.dataDirectory),
+    path.resolve(path.join('D:', 'Apps', 'Wattelier')),
+  );
+  assert.equal(
+    path.dirname(portable.resetRequestPath),
     path.resolve(path.join('D:', 'Apps', 'Wattelier')),
   );
 });
@@ -146,6 +160,7 @@ test('le preload n’expose que les méthodes de bureau autorisées', () => {
     'checkForUpdates',
     'getTailscaleStatus',
     'enableTailscale',
+    'resetApplication',
   ]);
   assert.match(preload, /wattelier:get-runtime-info/);
   assert.match(preload, /wattelier:set-open-at-login/);
@@ -153,6 +168,7 @@ test('le preload n’expose que les méthodes de bureau autorisées', () => {
   assert.match(preload, /wattelier:check-for-updates/);
   assert.match(preload, /wattelier:tailscale-status/);
   assert.match(preload, /wattelier:tailscale-enable/);
+  assert.match(preload, /wattelier:reset-application/);
   assert.doesNotMatch(preload, /require\(['"](?:node:)?(?:fs|child_process)/);
 });
 
@@ -196,6 +212,66 @@ test('le bureau sépare le serveur local du client HTTPS distant', () => {
   assert.match(main, /shell\.openExternal\(approvalUrl\.href\)/);
   assert.match(connectionPage, /jeton de connexion/i);
   assert.match(connectionPage, /Content-Security-Policy/);
+});
+
+test('la réinitialisation Electron exige une confirmation et redémarre hors mode caché', () => {
+  const main = fs.readFileSync(new URL('../desktop/main.js', import.meta.url), 'utf8');
+  assert.match(main, /wattelier:reset-application/);
+  assert.match(main, /label: 'Réinitialiser Wattelier…'/);
+  assert.match(main, /Réinitialiser et redémarrer/);
+  assert.match(main, /defaultId: 1/);
+  assert.match(main, /requestApplicationReset\(runtimePaths\.resetRequestPath\)/);
+  assert.match(main, /await stopServer\?\.\(\)/);
+  assert.match(main, /argument !== '--hidden'/);
+  assert.match(main, /performPendingReset/);
+});
+
+test('la réinitialisation déplace les données dans une sauvegarde récupérable', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'wattelier-reset-test-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const dataDirectory = path.join(directory, 'app-data');
+  const markerPath = path.join(directory, '.wattelier-reset-request');
+  fs.mkdirSync(path.join(dataDirectory, 'logs'), { recursive: true });
+  fs.writeFileSync(path.join(dataDirectory, 'elec.db'), 'base-test');
+  fs.writeFileSync(path.join(dataDirectory, 'logs', 'main.log'), 'journal-test');
+
+  assert.deepEqual(performPendingReset({ markerPath, dataDirectory }), {
+    requested: false,
+    backupPath: null,
+  });
+  requestApplicationReset(markerPath);
+  const reset = performPendingReset({
+    markerPath,
+    dataDirectory,
+    now: new Date('2026-08-08T12:34:56.000Z'),
+  });
+
+  assert.equal(reset.requested, true);
+  assert.equal(reset.backupPath, `${dataDirectory}-backup-20260808T123456Z`);
+  assert.equal(fs.existsSync(dataDirectory), false);
+  assert.equal(fs.existsSync(markerPath), false);
+  assert.equal(fs.readFileSync(path.join(reset.backupPath, 'elec.db'), 'utf8'), 'base-test');
+  assert.equal(
+    fs.readFileSync(path.join(reset.backupPath, 'logs', 'main.log'), 'utf8'),
+    'journal-test',
+  );
+});
+
+test('la réinitialisation gère une absence de données et les demandes annulées', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'wattelier-reset-empty-test-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const markerPath = path.join(directory, '.wattelier-reset-request');
+  const dataDirectory = path.join(directory, 'Wattelier-data');
+
+  requestApplicationReset(markerPath);
+  cancelApplicationReset(markerPath);
+  cancelApplicationReset(markerPath);
+  assert.equal(fs.existsSync(markerPath), false);
+  requestApplicationReset(markerPath);
+  assert.deepEqual(performPendingReset({ markerPath, dataDirectory }), {
+    requested: true,
+    backupPath: null,
+  });
 });
 
 test('les préférences de mise à jour sont locales, validées et écrites atomiquement', (t) => {

@@ -21,6 +21,7 @@ import {
 import { importLegacyDatabase } from './legacy-import.js';
 import { desktopRuntimeInfo, isTrustedDesktopUrl, requestSingleInstance } from './policy.js';
 import { readDesktopPreferences, writeDesktopPreferences } from './preferences.js';
+import { cancelApplicationReset, performPendingReset, requestApplicationReset } from './reset.js';
 import { loginItemOptions, resolveDesktopAssetPath, resolveRuntimePaths } from './runtime-paths.js';
 import { enableTailscaleServe, tailscaleStatus } from './tailscale.js';
 import { createDesktopUpdater } from './updater.js';
@@ -80,6 +81,33 @@ function currentLoginState() {
   return app.getLoginItemSettings(loginItemOptions(process.execPath)).openAtLogin;
 }
 
+async function confirmApplicationReset() {
+  const choice = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: 'Réinitialiser Wattelier',
+    message: 'Revenir à la configuration initiale ?',
+    detail:
+      'Wattelier va arrêter la collecte, redémarrer et déplacer la base, les réglages et les journaux dans un dossier de sauvegarde. Vous devrez refaire l’onboarding. La configuration externe Tailscale ne sera pas modifiée.',
+    buttons: ['Réinitialiser et redémarrer', 'Annuler'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  });
+  if (choice.response !== 0) return { reset: false };
+
+  requestApplicationReset(runtimePaths.resetRequestPath);
+  try {
+    await stopServer?.();
+  } catch (error) {
+    cancelApplicationReset(runtimePaths.resetRequestPath);
+    throw error;
+  }
+  quitting = true;
+  app.relaunch({ args: process.argv.slice(1).filter((argument) => argument !== '--hidden') });
+  app.quit();
+  return { reset: true };
+}
+
 function registerDesktopBridge() {
   ipcMain.handle('wattelier:get-runtime-info', (event) => {
     if (!isTrustedSender(event)) throw new Error('Origine non autorisée');
@@ -135,6 +163,12 @@ function registerDesktopBridge() {
       return publicResult;
     }
     return result;
+  });
+  ipcMain.handle('wattelier:reset-application', async (event) => {
+    if (!isTrustedSender(event) || applicationMode !== 'server') {
+      throw new Error('Origine non autorisée');
+    }
+    return confirmApplicationReset();
   });
 }
 
@@ -380,6 +414,17 @@ function createTray() {
             },
           ]
         : []),
+      ...(applicationMode === 'server'
+        ? [
+            {
+              label: 'Réinitialiser Wattelier…',
+              click: () =>
+                confirmApplicationReset().catch((error) =>
+                  dialog.showErrorBox('Réinitialisation impossible', error.message),
+                ),
+            },
+          ]
+        : []),
       { type: 'separator' },
       { label: 'Quitter Wattelier', click: () => app.quit() },
     ]),
@@ -392,6 +437,22 @@ async function startApplication() {
     portableDirectory,
     userDataDirectory: app.getPath('userData'),
   });
+  const completedReset = performPendingReset({
+    markerPath: runtimePaths.resetRequestPath,
+    dataDirectory: runtimePaths.dataDirectory,
+  });
+  if (completedReset.requested && process.env.WATTELIER_SKIP_LEGACY_IMPORT !== '1') {
+    await dialog.showMessageBox({
+      type: 'info',
+      title: 'Wattelier a été réinitialisé',
+      message: 'La configuration initiale va redémarrer.',
+      detail: completedReset.backupPath
+        ? `Vos anciennes données restent récupérables dans :\n${completedReset.backupPath}`
+        : 'Aucune ancienne donnée locale n’a été trouvée.',
+      buttons: ['Continuer'],
+      noLink: true,
+    });
+  }
   desktopPreferences = readDesktopPreferences(runtimePaths.preferencesPath);
   fs.mkdirSync(runtimePaths.logsDirectory, { recursive: true });
   app.setAppLogsPath(runtimePaths.logsDirectory);

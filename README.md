@@ -45,6 +45,7 @@ Wattelier peut importer l’ancien fichier `data/elec.db`, puis configure les so
 - serveur accessible sur le réseau local, protégé par un jeton autonome pour les clients distants ;
 - accès HTTPS privé facultatif et guidé avec Tailscale Serve ;
 - application Windows avec zone de notification et collecte en arrière-plan.
+- réinitialisation guidée avec sauvegarde récupérable des données précédentes.
 
 La puissance instantanée affichée est celle des prises mesurées. Wattelier ne présente jamais
 cette valeur comme la puissance globale du logement et n’additionne jamais les données Linky aux

@@ -6,6 +6,7 @@ export function resolveRuntimePaths({ portableDirectory, userDataDirectory }) {
   const root = portable
     ? path.join(path.resolve(portableDirectory), 'Wattelier-data')
     : path.join(path.resolve(userDataDirectory), 'app-data');
+  const resetRoot = portable ? path.resolve(portableDirectory) : path.resolve(userDataDirectory);
   return {
     portable,
     dataDirectory: root,
@@ -13,6 +14,7 @@ export function resolveRuntimePaths({ portableDirectory, userDataDirectory }) {
     databasePath: path.join(root, 'elec.db'),
     preferencesPath: path.join(root, 'desktop-preferences.json'),
     connectionPath: path.join(root, 'desktop-connection.bin'),
+    resetRequestPath: path.join(resetRoot, '.wattelier-reset-request'),
   };
 }
 

@@ -18,6 +18,7 @@ const expectedPackagedFiles = [
   '/desktop/connect.html',
   '/desktop/connect-preload.cjs',
   '/desktop/connection-store.js',
+  '/desktop/reset.js',
   '/desktop/tailscale.js',
   '/server/connection-token.js',
 ];

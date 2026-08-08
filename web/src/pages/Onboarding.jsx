@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { post } from '../api.js';
+import { tailscaleApprovalMessage } from '../tailscale-guidance.js';
 
 const defaults = {
   linky_enabled: true,
@@ -77,9 +78,7 @@ export default function Onboarding({ tariffs, onReady }) {
       const result = await window.wattelierDesktop.enableTailscale();
       if (result.needsApproval) {
         setTailscaleNeedsHttps(true);
-        setError(
-          'Dans Tailscale, ouvrez « HTTPS Certificates », cliquez sur « Enable HTTPS », puis revenez ici et réessayez. Si l’option n’apparaît pas, connectez-vous avec le compte administrateur du réseau Tailscale.',
-        );
+        setError(tailscaleApprovalMessage(result));
         return;
       }
       setForm((current) => ({ ...current, public_server_url: result.serverUrl }));
@@ -360,7 +359,7 @@ export default function Onboarding({ tariffs, onReady }) {
                   {tailscaleBusy
                     ? 'Configuration…'
                     : tailscaleNeedsHttps
-                      ? 'Réessayer après l’activation HTTPS'
+                      ? 'Vérifier à nouveau'
                       : 'Configurer automatiquement Tailscale'}
                 </button>
               )}

@@ -72,21 +72,26 @@ async function runTailscale(args, execute = executeFile, timeout = 30_000) {
 function statusFromJson(stdout) {
   const status = JSON.parse(stdout);
   const dnsName = String(status.Self?.DNSName || '').replace(/\.$/, '');
+  const tailnetDnsName = String(status.MagicDNSSuffix || '');
   return {
     nodeId: String(status.Self?.ID || ''),
     installed: true,
     connected: status.BackendState === 'Running' && Boolean(dnsName),
     dnsName,
+    tailnetDnsName,
+    httpsEnabled: Array.isArray(status.CertDomains) && status.CertDomains.length > 0,
     serverUrl: dnsName ? `https://${dnsName}` : '',
   };
 }
 
-/** @param {{ nodeId: string, installed: boolean, connected: boolean, dnsName: string, serverUrl: string, error?: string }} status */
+/** @param {{ nodeId: string, installed: boolean, connected: boolean, dnsName: string, tailnetDnsName: string, httpsEnabled: boolean, serverUrl: string, error?: string }} status */
 function publicStatus(status) {
   return {
     installed: status.installed,
     connected: status.connected,
     dnsName: status.dnsName,
+    tailnetDnsName: status.tailnetDnsName,
+    httpsEnabled: status.httpsEnabled,
     serverUrl: status.serverUrl,
     ...(status.error === undefined ? {} : { error: status.error }),
   };
@@ -109,6 +114,8 @@ async function tailscaleStatusWithIdentity(execute) {
       installed: message !== "Tailscale n'est pas installé.",
       connected: false,
       dnsName: '',
+      tailnetDnsName: '',
+      httpsEnabled: false,
       serverUrl: '',
       error: message,
     };
@@ -126,8 +133,16 @@ export async function enableTailscaleServe(port, execute = executeFile) {
   const status = publicStatus(statusWithIdentity);
   if (!status.installed) throw new Error("Tailscale n'est pas installé.");
   if (!status.connected) throw new Error("Connectez d'abord ce PC à Tailscale.");
+  if (!status.httpsEnabled) {
+    return {
+      ...status,
+      enabled: false,
+      needsApproval: true,
+      approvalReason: 'https-disabled',
+    };
+  }
   try {
-    await runTailscale(['serve', '--bg', `http://127.0.0.1:${Number(port)}`], execute, 5_000);
+    await runTailscale(['serve', '--bg', `http://127.0.0.1:${Number(port)}`], execute, 30_000);
   } catch (error) {
     const approvalUrl = serveApprovalUrl(error, statusWithIdentity.nodeId);
     if (approvalUrl) {

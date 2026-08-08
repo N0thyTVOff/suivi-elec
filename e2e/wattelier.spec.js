@@ -30,6 +30,8 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
         installed: true,
         connected: true,
         dnsName: 'pc.maison.ts.net',
+        tailnetDnsName: 'maison.ts.net',
+        httpsEnabled: false,
         serverUrl: 'https://pc.maison.ts.net',
       }),
       enableTailscale: async () => {
@@ -40,6 +42,9 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
           enabled: tailscaleAttempts > 1,
           needsApproval: tailscaleAttempts === 1,
           dnsName: 'pc.maison.ts.net',
+          tailnetDnsName: 'maison.ts.net',
+          httpsEnabled: tailscaleAttempts > 1,
+          adminPageOpened: tailscaleAttempts === 1,
           serverUrl: 'https://pc.maison.ts.net',
         };
       },
@@ -100,11 +105,9 @@ test('onboarding, connexion, navigation, thèmes et responsive', async ({ page, 
     name: 'Configurer automatiquement Tailscale',
   });
   await tailscaleButton.click();
-  await expect(page.getByRole('alert')).toContainText('HTTPS Certificates');
-  await expect(
-    page.getByRole('button', { name: 'Réessayer après l’activation HTTPS' }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Réessayer après l’activation HTTPS' }).click();
+  await expect(page.getByRole('alert')).toContainText('maison.ts.net');
+  await expect(page.getByRole('button', { name: 'Vérifier à nouveau' })).toBeVisible();
+  await page.getByRole('button', { name: 'Vérifier à nouveau' }).click();
   await expect(page.getByText('Serveur publié sur https://pc.maison.ts.net')).toBeVisible();
   await page.getByRole('button', { name: 'Générer ou renouveler le jeton de connexion' }).click();
   await expect(page.locator('.token-box code')).toHaveText(/^wtl1_/);

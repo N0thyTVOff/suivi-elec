@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, post } from '../api.js';
+import { tailscaleApprovalMessage } from '../tailscale-guidance.js';
 
 export default function Settings({ status }) {
   const [settings, setSettings] = useState(null);
@@ -103,9 +104,7 @@ export default function Settings({ status }) {
       if (result.needsApproval) {
         setTailscale(result);
         setTailscaleNeedsHttps(true);
-        setTailscaleError(
-          'Dans Tailscale, ouvrez « HTTPS Certificates », cliquez sur « Enable HTTPS », puis revenez ici et réessayez. Si l’option n’apparaît pas, connectez-vous avec le compte administrateur du réseau Tailscale.',
-        );
+        setTailscaleError(tailscaleApprovalMessage(result));
         return;
       }
       const next = await post('settings', { public_server_url: result.serverUrl });
@@ -798,7 +797,7 @@ export default function Settings({ status }) {
                 {tailscaleBusy
                   ? 'Configuration…'
                   : tailscaleNeedsHttps
-                    ? 'Réessayer après l’activation HTTPS'
+                    ? 'Vérifier à nouveau'
                     : 'Configurer automatiquement Tailscale'}
               </button>
             )}

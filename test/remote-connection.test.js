@@ -131,6 +131,8 @@ test('le module Tailscale détecte le tailnet et active Serve sur le serveur loc
         stdout: JSON.stringify({
           BackendState: 'Running',
           Self: { ID: 'local_node', DNSName: 'pc.maison.ts.net.' },
+          MagicDNSSuffix: 'maison.ts.net',
+          CertDomains: ['pc.maison.ts.net'],
         }),
       };
     }
@@ -140,6 +142,8 @@ test('le module Tailscale détecte le tailnet et active Serve sur le serveur loc
     installed: true,
     connected: true,
     dnsName: 'pc.maison.ts.net',
+    tailnetDnsName: 'maison.ts.net',
+    httpsEnabled: true,
     serverUrl: 'https://pc.maison.ts.net',
   });
   const enabled = await enableTailscaleServe(3017, execute);
@@ -159,6 +163,8 @@ test('le module Tailscale signale une installation absente sans exposer la comma
     installed: false,
     connected: false,
     dnsName: '',
+    tailnetDnsName: '',
+    httpsEnabled: false,
     serverUrl: '',
     error: "Tailscale n'est pas installé.",
   });
@@ -181,6 +187,8 @@ test('le module Tailscale corrige un lien Serve visant un autre appareil', async
         stdout: JSON.stringify({
           BackendState: 'Running',
           Self: { ID: 'local_456', DNSName: 'pc.maison.ts.net.' },
+          MagicDNSSuffix: 'maison.ts.net',
+          CertDomains: ['pc.maison.ts.net'],
         }),
       };
     }
@@ -197,16 +205,46 @@ test('le module Tailscale corrige un lien Serve visant un autre appareil', async
     installed: true,
     connected: true,
     dnsName: 'pc.maison.ts.net',
+    tailnetDnsName: 'maison.ts.net',
+    httpsEnabled: true,
     serverUrl: 'https://pc.maison.ts.net',
     enabled: false,
     needsApproval: true,
     approvalUrl: 'https://login.tailscale.com/f/serve?node=local_456',
   });
   assert.deepEqual(optionsSeen.at(-1), {
-    timeout: 5_000,
+    timeout: 30_000,
     windowsHide: true,
     maxBuffer: 1_000_000,
   });
+});
+
+test('le module Tailscale identifie le tailnet sans relancer Serve tant que HTTPS y est absent', async () => {
+  let calls = 0;
+  const result = await enableTailscaleServe(3017, async () => {
+    calls += 1;
+    return {
+      stdout: JSON.stringify({
+        BackendState: 'Running',
+        Self: { ID: 'local_node', DNSName: 'pc.maison.ts.net.' },
+        MagicDNSSuffix: 'maison.ts.net',
+        CertDomains: null,
+      }),
+    };
+  });
+
+  assert.deepEqual(result, {
+    installed: true,
+    connected: true,
+    dnsName: 'pc.maison.ts.net',
+    tailnetDnsName: 'maison.ts.net',
+    httpsEnabled: false,
+    serverUrl: 'https://pc.maison.ts.net',
+    enabled: false,
+    needsApproval: true,
+    approvalReason: 'https-disabled',
+  });
+  assert.equal(calls, 1, 'Serve ne doit pas être relancé avant la propagation HTTPS');
 });
 
 test('le module Tailscale ne transforme plus une erreur Serve en erreur d’installation', async () => {
@@ -219,6 +257,8 @@ test('le module Tailscale ne transforme plus une erreur Serve en erreur d’inst
         stdout: JSON.stringify({
           BackendState: 'Running',
           Self: { DNSName: 'pc.maison.ts.net.' },
+          MagicDNSSuffix: 'maison.ts.net',
+          CertDomains: ['pc.maison.ts.net'],
         }),
       };
     }

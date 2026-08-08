@@ -103,7 +103,8 @@ Le jeton protège l’API, mais HTTP ne chiffre pas le trafic. Ne redirigez jama
    automatiquement Tailscale** ;
 3. lors de la première activation de Serve sur le tailnet, Wattelier ouvre la page **DNS** de
    l'Admin Console Tailscale : dans **HTTPS Certificates**, cliquez sur **Enable HTTPS**, revenez
-   dans Wattelier puis cliquez sur **Réessayer après l'activation HTTPS**. Cette opération exige un
+   dans Wattelier puis cliquez sur **Vérifier à nouveau**. Wattelier affiche le nom DNS exact du
+   tailnet attendu afin d'éviter d'activer HTTPS sur un autre réseau. Cette opération exige un
    compte administrateur du tailnet ;
 4. générez le jeton de connexion et collez cette valeur unique dans l'édition distante.
 

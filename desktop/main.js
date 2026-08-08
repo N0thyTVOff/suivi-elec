@@ -46,6 +46,7 @@ let desktopPreferences;
 let updater;
 let applicationMode = 'server';
 let remoteConnection = null;
+let tailscaleAdminOpened = false;
 
 function desktopAsset(filename) {
   return resolveDesktopAssetPath({
@@ -152,11 +153,16 @@ function registerDesktopBridge() {
     }
     const result = await enableTailscaleServe(PORT);
     if (result.needsApproval) {
-      await shell.openExternal(TAILSCALE_DNS_ADMIN_URL);
+      const adminPageOpened = !tailscaleAdminOpened;
+      if (adminPageOpened) {
+        await shell.openExternal(TAILSCALE_DNS_ADMIN_URL);
+        tailscaleAdminOpened = true;
+      }
       const publicResult = { ...result };
       delete publicResult.approvalUrl;
-      return publicResult;
+      return { ...publicResult, adminPageOpened };
     }
+    tailscaleAdminOpened = false;
     return result;
   });
   ipcMain.handle('wattelier:reset-application', async (event) => {
